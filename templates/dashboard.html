@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - ResumeAI{% endblock %}
+
+{% block content %}
+<div class="space-y-8 max-w-5xl mx-auto">
+  <!-- Welcome Top Bar -->
+  <div class="clean-card p-6 sm:p-8 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div class="space-y-1">
+      <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-slate-700"></i> AI Resume Engine
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-slate-900">
+        Hello, {{ current_user.username }}
+      </h1>
+      <p class="text-xs sm:text-sm text-slate-500">
+        Active Provider: <span class="text-slate-900 font-medium capitalize">{{ current_user.preferred_model_provider or 'gemini' }}</span> 
+        • Model: <span class="text-slate-700 font-mono text-xs">{{ current_user.preferred_model or 'gemini-3.6-flash' }}</span>
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2.5">
+      <a href="{{ url_for('build_manual') }}" class="px-3.5 py-2 rounded-lg font-medium text-sm bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 transition-all flex items-center gap-2" title="Pick template and build without AI">
+        <i data-lucide="layout" class="w-4 h-4 text-slate-600"></i> Build (No AI)
+      </a>
+      <a href="{{ url_for('generate') }}" class="px-4 py-2 rounded-lg font-medium text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all flex items-center gap-2">
+        <i data-lucide="sparkles" class="w-4 h-4"></i> Tailor with AI
+      </a>
+      <a href="{{ url_for('profile') }}" class="px-3.5 py-2 rounded-lg font-medium text-sm bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 transition-all flex items-center gap-2">
+        <i data-lucide="user-check" class="w-4 h-4 text-slate-600"></i> Master Profile
+      </a>
+    </div>
+  </div>
+
+  <!-- Profile Completeness Banner -->
+  {% set has_profile = profile.full_name and profile.skills and profile.skills|length > 0 %}
+  {% if not has_profile %}
+    <div class="p-5 rounded-xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2 rounded-lg bg-amber-100 text-amber-800">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h4 class="text-sm font-semibold text-amber-900">Your Master Career Profile is empty</h4>
+          <p class="text-xs text-amber-700">Please fill in your personal details, work experience, and skills in your Master Profile to start tailoring resumes.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <a href="{{ url_for('profile') }}" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-800 hover:bg-amber-900 text-white transition-all flex items-center gap-1.5 shadow-sm">
+          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Fill Profile Details
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Quick Stats Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="clean-card p-5 rounded-xl">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Resumes</span>
+        <i data-lucide="files" class="w-4 h-4 text-slate-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-slate-900">{{ resumes|length }}</div>
+    </div>
+
+    <div class="clean-card p-5 rounded-xl">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Skills</span>
+        <i data-lucide="layers" class="w-4 h-4 text-slate-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-slate-900">{{ profile.skills|length if profile.skills else 0 }}</div>
+    </div>
+
+    <div class="clean-card p-5 rounded-xl">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Work Roles</span>
+        <i data-lucide="briefcase" class="w-4 h-4 text-slate-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-slate-900">{{ profile.experiences|length if profile.experiences else 0 }}</div>
+    </div>
+
+    <div class="clean-card p-5 rounded-xl">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Configured AI Key</span>
+        <i data-lucide="key-round" class="w-4 h-4 text-slate-400"></i>
+      </div>
+      <div class="text-xs font-medium text-slate-700">
+        {% if current_user.gemini_api_key and current_user.groq_api_key %}
+          Gemini + Groq Custom
+        {% elif current_user.gemini_api_key %}
+          Gemini Custom Key
+        {% elif current_user.groq_api_key %}
+          Groq Custom Key
+        {% else %}
+          Universal Default Active
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Job Application Pipeline Tracker Card -->
+  <div class="clean-card p-6 rounded-2xl space-y-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i data-lucide="briefcase" class="w-5 h-5 text-blue-600"></i>
+        <h3 class="text-base font-bold text-slate-900">Job Application Pipeline</h3>
+      </div>
+      <a href="{{ url_for('applications_list') }}" class="text-xs text-blue-600 hover:text-blue-800 font-semibold">Open Kanban Board →</a>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+        <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Saved</div>
+        <div class="text-lg font-bold text-slate-800 mt-0.5">{{ app_stats.get('Saved', 0) if app_stats else 0 }}</div>
+      </div>
+      <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+        <div class="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Applied</div>
+        <div class="text-lg font-bold text-blue-900 mt-0.5">{{ app_stats.get('Applied', 0) if app_stats else 0 }}</div>
+      </div>
+      <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+        <div class="text-[11px] font-semibold text-amber-600 uppercase tracking-wider">Interviewing</div>
+        <div class="text-lg font-bold text-amber-900 mt-0.5">{{ app_stats.get('Interviewing', 0) if app_stats else 0 }}</div>
+      </div>
+      <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+        <div class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">Offered</div>
+        <div class="text-lg font-bold text-emerald-900 mt-0.5">{{ app_stats.get('Offered', 0) if app_stats else 0 }}</div>
+      </div>
+      <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl">
+        <div class="text-[11px] font-semibold text-rose-600 uppercase tracking-wider">Rejected</div>
+        <div class="text-lg font-bold text-rose-900 mt-0.5">{{ app_stats.get('Rejected', 0) if app_stats else 0 }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Resumes Section -->
+  <div class="clean-card p-6 rounded-2xl">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <i data-lucide="history" class="w-4 h-4 text-slate-500"></i>
+        <h3 class="text-base font-bold text-slate-900">Recent Resumes</h3>
+      </div>
+      <a href="{{ url_for('resumes_list') }}" class="text-xs text-slate-600 hover:text-slate-900 font-medium">View all →</a>
+    </div>
+
+    {% if resumes %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <th class="pb-3 px-3">Resume Target</th>
+              <th class="pb-3 px-3">Engine</th>
+              <th class="pb-3 px-3">ATS Score</th>
+              <th class="pb-3 px-3">Date</th>
+              <th class="pb-3 px-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for r in resumes %}
+              <tr class="hover:bg-slate-50/80 transition-colors">
+                <td class="py-3 px-3">
+                  <a href="{{ url_for('view_resume', resume_id=r.id) }}" class="font-medium text-slate-900 hover:text-slate-600 flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-4 h-4 text-slate-400"></i>
+                    {{ r.title }}
+                  </a>
+                  {% if r.target_company %}
+                    <span class="text-xs text-slate-500 block ml-6">{{ r.target_company }}</span>
+                  {% endif %}
+                </td>
+                <td class="py-3 px-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                    {{ r.provider_used|capitalize }} • {{ r.model_used }}
+                  </span>
+                </td>
+                <td class="py-3 px-3">
+                  {% if r.match_score >= 80 %}
+                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {{ r.match_score }}% Match
+                    </span>
+                  {% else %}
+                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                      {{ r.match_score }}% Match
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="py-3 px-3 text-xs text-slate-500">
+                  {{ r.created_at.strftime('%b %d, %Y') if r.created_at else '' }}
+                </td>
+                <td class="py-3 px-3 text-right">
+                  <div class="inline-flex items-center gap-1.5">
+                    <a href="{{ url_for('view_resume', resume_id=r.id) }}" class="px-2.5 py-1 rounded text-xs font-medium bg-white hover:bg-slate-100 border border-slate-200 text-slate-700">
+                      View
+                    </a>
+                    <a href="{{ url_for('download_pdf', resume_id=r.id) }}" class="p-1 text-slate-600 hover:text-slate-900" title="Download PDF">
+                      <i data-lucide="file-down" class="w-4 h-4"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-center py-10 text-slate-500 space-y-3">
+        <i data-lucide="file-plus" class="w-8 h-8 mx-auto text-slate-400"></i>
+        <p class="text-sm">No tailored resumes yet.</p>
+        <a href="{{ url_for('generate') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 text-white hover:bg-slate-800">
+          <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> Tailor First Resume
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

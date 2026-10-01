@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Resume - {{ resume.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+  <div class="clean-card p-6 rounded-2xl flex items-center justify-between">
+    <div>
+      <div class="text-xs text-slate-500 mb-1">
+        <a href="{{ url_for('view_resume', resume_id=resume.id) }}" class="hover:text-slate-900 flex items-center gap-1">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Back to Resume
+        </a>
+      </div>
+      <h1 class="text-xl font-bold text-slate-900">Edit Generated Resume</h1>
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('edit_resume', resume_id=resume.id) }}" class="space-y-6">
+    <div class="clean-card p-6 rounded-2xl space-y-4">
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Resume Title</label>
+        <input type="text" name="title" value="{{ resume.title }}" required
+          class="clean-input w-full rounded-lg px-3.5 py-2 text-sm">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1 flex items-center justify-between">
+          <span>Structured Resume JSON Payload</span>
+          <span class="text-[11px] text-slate-400">Used for PDF generation</span>
+        </label>
+        <textarea name="json_content" rows="14" required
+          class="clean-input w-full rounded-xl p-3.5 font-mono text-xs leading-relaxed text-slate-800 bg-slate-50/50">{{ json_pretty }}</textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Generated Markdown Content</label>
+        <textarea name="markdown_content" rows="8"
+          class="clean-input w-full rounded-xl p-3.5 font-mono text-xs leading-relaxed text-slate-800 bg-slate-50/50">{{ resume.generated_markdown }}</textarea>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-2.5">
+      <a href="{{ url_for('view_resume', resume_id=resume.id) }}" class="px-4 py-2 rounded-lg font-medium text-xs sm:text-sm bg-white hover:bg-slate-50 border border-slate-200 text-slate-700">
+        Cancel
+      </a>
+      <button type="submit"
+        class="px-5 py-2 rounded-lg font-medium text-xs sm:text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-sm flex items-center gap-1.5">
+        <i data-lucide="save" class="w-4 h-4"></i> Save Changes
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

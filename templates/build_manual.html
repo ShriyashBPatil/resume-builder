@@ -1,0 +1,1265 @@
+{% extends "base.html" %}
+
+{% block title %}Direct Resume Builder & Live Studio - ResumeAI{% endblock %}
+
+{% block content %}
+<div class="max-w-[1440px] mx-auto space-y-6">
+  
+  <!-- Top Command Bar -->
+  <div class="clean-card bg-white/90 backdrop-blur-md p-5 sm:p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-200/80 shadow-xs sticky top-20 z-30">
+    <div class="space-y-1">
+      <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[11px] font-semibold tracking-wide text-slate-700">
+        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-slate-600"></i> Direct Studio (No AI Tokens Required)
+      </div>
+      <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Interactive Resume Studio & Live Preview</h1>
+      <p class="text-xs text-slate-500 font-medium">Customize styles, fonts, edit your career experience, and inspect real-time paper rendering side-by-side.</p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Quick Reset / Reload Master Data Button -->
+      <button type="button" onclick="resetToMasterProfile()" class="px-3.5 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-all flex items-center gap-1.5 shadow-2xs" title="Reload details from Master Profile">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-slate-500"></i> Reset to Master
+      </button>
+
+      <!-- Primary Action CTA -->
+      <button type="button" onclick="submitBuilderForm()" class="px-6 py-2.5 bg-slate-950 hover:bg-slate-800 active:scale-98 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm flex items-center gap-2 transition-all">
+        <i data-lucide="file-check" class="w-4 h-4"></i>
+        <span>Save & Build Resume</span>
+      </button>
+    </div>
+  </div>
+
+  <form id="builderForm" method="POST" action="{{ url_for('build_manual') }}">
+    <!-- Hidden data inputs -->
+    <input type="hidden" name="edited_resume_json" id="edited_resume_json">
+    <input type="hidden" name="template_name" id="form_template_name" value="{{ selected_template or 'modern' }}">
+    <input type="hidden" name="accent_color" id="form_accent_color" value="#2563eb">
+    <input type="hidden" name="font_name" id="form_font_name" value="{{ selected_font or 'inter' }}">
+    <input type="hidden" name="single_page_mode" id="form_single_page_mode" value="0">
+    <input type="hidden" name="include_qr" id="form_include_qr" value="1">
+    <input type="hidden" name="include_photo" id="form_include_photo" value="1">
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- ==================== LEFT COLUMN: WORKSPACE CONTROLS ==================== -->
+      <div class="lg:col-span-6 space-y-6">
+        
+        <!-- SECTION 1: DESIGN & TYPOGRAPHY SYSTEM -->
+        <div class="clean-card bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+              <i data-lucide="palette" class="w-4 h-4 text-blue-600"></i> 1. Design & Typography System
+            </h3>
+            <span class="text-[11px] font-semibold text-slate-400">4 Layouts • 6 Typography Pairings</span>
+          </div>
+
+          <!-- Template Cards Grid -->
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-2">Resume Layout Template</label>
+            <div class="grid grid-cols-2 gap-2.5">
+              {% for tkey, tinfo in templates.items() %}
+                <button type="button" onclick="setTemplate('{{ tkey }}')" id="btn-tmpl-{{ tkey }}"
+                  class="tmpl-btn group relative p-3.5 rounded-xl text-left border transition-all cursor-pointer {% if (selected_template or 'modern') == tkey %}border-slate-950 bg-slate-950 text-white shadow-md{% else %}border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50/70{% endif %}">
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="font-extrabold text-xs tracking-tight flex items-center gap-1.5">
+                      <span class="w-2.5 h-2.5 rounded-full {{ 'bg-blue-500' if tkey == 'modern' else ('bg-slate-700 ring-1 ring-white' if tkey == 'executive' else ('bg-indigo-500' if tkey == 'creative_sidebar' else 'bg-teal-500')) }}"></span>
+                      {{ tinfo.name.split('(')[0].strip() }}
+                    </div>
+                    {% if (selected_template or 'modern') == tkey %}
+                      <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                    {% endif %}
+                  </div>
+                  <div class="text-[11px] {{ 'text-slate-300' if (selected_template or 'modern') == tkey else 'text-slate-500' }} mt-1 font-medium">
+                    {{ tinfo.name.split('(')[1].replace(')', '') if '(' in tinfo.name else '' }}
+                  </div>
+                </button>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Font Family Selector (New) -->
+          <div class="pt-2 border-t border-slate-100">
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-2 flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="type" class="w-3.5 h-3.5 text-slate-500"></i> Typography & Font Family
+              </span>
+              <span class="text-[10px] text-slate-400 font-normal">Google Fonts Powered</span>
+            </label>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {% for fkey, finfo in fonts.items() %}
+                <button type="button" onclick="setFontFamily('{{ fkey }}')" id="btn-font-{{ fkey }}"
+                  class="font-btn p-2.5 rounded-xl text-left border transition-all cursor-pointer {% if (selected_font or 'inter') == fkey %}border-slate-950 bg-slate-900 text-white shadow-sm{% else %}border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50{% endif %}">
+                  <div class="font-bold text-xs">{{ finfo.name.split('(')[0].strip() }}</div>
+                  <div class="text-[10px] {{ 'text-slate-300' if (selected_font or 'inter') == fkey else 'text-slate-400' }} truncate mt-0.5">
+                    {{ finfo.name.split('(')[1].replace(')', '') if '(' in finfo.name else '' }}
+                  </div>
+                </button>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Accent Palette & Display Toggles -->
+          <div class="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
+            <!-- Accent Swatches -->
+            <div class="space-y-1.5">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-slate-600">Accent Color</div>
+              <div class="flex items-center gap-2">
+                {% set colors = [
+                  ('#2563eb', 'Sapphire Blue'),
+                  ('#0f172a', 'Slate Onyx'),
+                  ('#059669', 'Emerald Green'),
+                  ('#7c3aed', 'Royal Purple'),
+                  ('#dc2626', 'Crimson Ruby'),
+                  ('#0891b2', 'Teal Modern')
+                ] %}
+                {% for col, colName in colors %}
+                  <button type="button" onclick="setAccentColor('{{ col }}')" title="{{ colName }}"
+                    class="color-swatch relative w-6 h-6 rounded-full border border-black/10 transition-all hover:scale-115 focus:outline-none {% if col == '#2563eb' %}ring-2 ring-slate-900 ring-offset-2 scale-110{% endif %}"
+                    style="background-color: {{ col }};" data-color="{{ col }}">
+                  </button>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Display Toggles -->
+            <div class="space-y-1.5">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-slate-600">Layout & Display Options</div>
+              <div class="flex flex-wrap items-center gap-2">
+                <label class="inline-flex items-center gap-1.5 p-1.5 pr-2.5 bg-white border border-slate-200 rounded-lg cursor-pointer hover:border-slate-300 transition-all select-none">
+                  <input type="checkbox" id="singlePageToggle" onchange="toggleSinglePage(this.checked)" class="rounded text-slate-900 focus:ring-slate-900 w-4 h-4 ml-0.5">
+                  <span class="text-xs font-bold text-slate-800">1-Page Fit</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 p-1.5 pr-2.5 bg-white border border-slate-200 rounded-lg cursor-pointer hover:border-slate-300 transition-all select-none">
+                  <input type="checkbox" id="qrToggle" checked onchange="toggleQrOption(this.checked)" class="rounded text-slate-900 focus:ring-slate-900 w-4 h-4 ml-0.5">
+                  <span class="text-xs font-bold text-slate-800 flex items-center gap-1">
+                    <i data-lucide="qr-code" class="w-3.5 h-3.5 text-slate-500"></i> QR
+                  </span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 p-1.5 pr-2.5 bg-white border border-slate-200 rounded-lg cursor-pointer hover:border-slate-300 transition-all select-none">
+                  <input type="checkbox" id="photoToggle" checked onchange="togglePhotoOption(this.checked)" class="rounded text-slate-900 focus:ring-slate-900 w-4 h-4 ml-0.5">
+                  <span class="text-xs font-bold text-slate-800 flex items-center gap-1">
+                    <i data-lucide="image" class="w-3.5 h-3.5 text-slate-500"></i> Photo
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: RESUME METADATA -->
+        <div class="clean-card bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3.5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2.5">
+            <i data-lucide="tag" class="w-4 h-4 text-slate-500"></i> 2. Document Identity
+          </h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">Library Name</label>
+              <input type="text" name="title" id="input_title" value="{{ profile.full_name or 'Standard' }} Resume" required class="clean-input w-full rounded-lg px-3 py-2 text-xs font-medium">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1">Target Professional Title</label>
+              <input type="text" name="target_role" id="input_target_role" value="{{ profile.professional_title or '' }}" oninput="syncPreview()" placeholder="e.g. Senior Backend Engineer" class="clean-input w-full rounded-lg px-3 py-2 text-xs font-medium">
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: INTERACTIVE CONTENT EDITOR -->
+        <div class="clean-card bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="space-y-0.5">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                <i data-lucide="edit-3" class="w-4 h-4 text-blue-600"></i> 3. Interactive Resume Content
+              </h3>
+              <p class="text-[11px] text-slate-400">Edits dynamically mirror onto the visual paper preview.</p>
+            </div>
+            <div class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-bold">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Instant Live Sync
+            </div>
+          </div>
+
+          <!-- Contact & Header Info Subcard -->
+          <div class="space-y-3 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
+            <div class="flex items-center justify-between">
+              <div class="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                <i data-lucide="id-card" class="w-3.5 h-3.5 text-slate-500"></i> Candidate Contact & Profile Photo
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold rounded-lg cursor-pointer transition-colors flex items-center gap-1">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Upload Photo
+                  <input type="file" id="manualPhotoInput" accept="image/*" class="hidden" onchange="handleManualPhotoUpload(event)">
+                </label>
+                <button type="button" id="btnRemoveManualPhoto" onclick="removeManualPhoto()" class="hidden px-2 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[11px] font-semibold rounded-lg transition-colors">
+                  <i data-lucide="trash-2" class="w-3 h-3 inline"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 p-2 bg-white rounded-lg border border-slate-200/60" id="photoPreviewContainer">
+              <div class="w-10 h-10 rounded-full border border-slate-200 bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
+                <img id="manualPhotoImg" src="{{ profile.profile_photo_url or '' }}" alt="Profile Photo" class="w-full h-full object-cover {% if not profile.profile_photo_url %}hidden{% endif %}">
+                <i id="manualPhotoPlaceholder" data-lucide="user" class="w-5 h-5 text-slate-400 {% if profile.profile_photo_url %}hidden{% endif %}"></i>
+              </div>
+              <div class="text-[11px] text-slate-500 leading-tight">
+                <span class="font-semibold text-slate-700">Photo Display:</span> <span id="manualPhotoStatus">{% if profile.profile_photo_url %}Photo loaded from Master Profile{% else %}No photo selected (optional){% endif %}</span>
+              </div>
+            </div>
+            <input type="hidden" id="ed_photo_url" value="{{ profile.profile_photo_url or '' }}">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              <div>
+                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Full Name</label>
+                <input type="text" id="ed_name" value="{{ profile.full_name or '' }}" oninput="syncPreview()" placeholder="Full Name" class="clean-input w-full rounded-lg px-2.5 py-1.5 bg-white text-xs">
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Email Address</label>
+                <input type="email" id="ed_email" value="{{ profile.email or '' }}" oninput="syncPreview()" placeholder="Email" class="clean-input w-full rounded-lg px-2.5 py-1.5 bg-white text-xs">
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Phone Number</label>
+                <input type="text" id="ed_phone" value="{{ profile.phone or '' }}" oninput="syncPreview()" placeholder="+91 98765 43210" class="clean-input w-full rounded-lg px-2.5 py-1.5 bg-white text-xs">
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Location</label>
+                <input type="text" id="ed_location" value="{{ profile.location or '' }}" oninput="syncPreview()" placeholder="City, State / Remote" class="clean-input w-full rounded-lg px-2.5 py-1.5 bg-white text-xs">
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">LinkedIn Profile</label>
+                <input type="text" id="ed_linkedin" value="{{ profile.linkedin_url or '' }}" oninput="syncPreview()" placeholder="https://linkedin.com/in/..." class="clean-input w-full rounded-lg px-2.5 py-1.5 bg-white text-xs">
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">GitHub / Portfolio</label>
+                <input type="text" id="ed_github" value="{{ profile.github_url or '' }}" oninput="syncPreview()" placeholder="https://github.com/..." class="clean-input w-full rounded-lg px-2.5 py-1.5 bg-white text-xs">
+              </div>
+            </div>
+          </div>
+
+          <!-- Executive Summary -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-800">Executive Summary</label>
+              <span class="text-[10px] text-slate-400">High-level career positioning</span>
+            </div>
+            <textarea id="ed_summary" rows="3" oninput="syncPreview()" placeholder="Write 2-4 sentences highlighting your background, core domain competencies, and impact..." class="clean-input w-full p-3 rounded-xl text-xs leading-relaxed">{{ profile.summary or '' }}</textarea>
+          </div>
+
+          <!-- Core Competencies -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-800">Skills & Tech Stack</label>
+              <span class="text-[10px] text-slate-400">Comma-separated badges</span>
+            </div>
+            <input type="text" id="ed_skills" value="{{ profile.skills|join(', ') if profile.skills else '' }}" oninput="syncPreview()" placeholder="Python, MariaDB, Docker, FastAPI, PyTorch, Kubernetes, Linux, Git..." class="clean-input w-full px-3 py-2 rounded-xl text-xs font-medium">
+          </div>
+
+          <!-- Professional Work Experience Section -->
+          <div class="space-y-3 pt-2 border-t border-slate-100">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="block text-xs font-bold text-slate-800">Work Experience</label>
+                <p class="text-[10px] text-slate-400">Accomplishments, leadership, and metrics</p>
+              </div>
+              <button type="button" onclick="addExperienceCard()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Position
+              </button>
+            </div>
+            <div id="ed_experience_list" class="space-y-3"></div>
+          </div>
+
+          <!-- Education Section -->
+          <div class="space-y-3 pt-2 border-t border-slate-100">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="block text-xs font-bold text-slate-800">Education & Degrees</label>
+                <p class="text-[10px] text-slate-400">Universities, credentials, and graduation dates</p>
+              </div>
+              <button type="button" onclick="addEducationCard()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Degree
+              </button>
+            </div>
+            <div id="ed_education_list" class="space-y-3"></div>
+          </div>
+
+          <!-- Key Projects Section -->
+          <div class="space-y-3 pt-2 border-t border-slate-100">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="block text-xs font-bold text-slate-800">Key Projects & Portfolios</label>
+                <p class="text-[10px] text-slate-400">Repositories, live architectures, and system designs</p>
+              </div>
+              <button type="button" onclick="addProjectCard()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Project
+              </button>
+            </div>
+            <div id="ed_projects_list" class="space-y-3"></div>
+          </div>
+
+          <!-- Certifications Section -->
+          <div class="space-y-3 pt-2 border-t border-slate-100">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="block text-xs font-bold text-slate-800">Certifications & Licenses</label>
+                <p class="text-[10px] text-slate-400">Verified industry certifications</p>
+              </div>
+              <button type="button" onclick="addCertCard()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Certification
+              </button>
+            </div>
+            <div id="ed_certs_list" class="space-y-3"></div>
+          </div>
+
+        </div>
+
+        <!-- Sticky Bottom Mobile Action CTA -->
+        <div class="pt-2">
+          <button type="button" onclick="submitBuilderForm()" 
+            class="w-full py-4 px-6 rounded-2xl font-black text-sm bg-slate-950 hover:bg-slate-800 active:scale-98 text-white shadow-lg transition-all flex items-center justify-center gap-2">
+            <i data-lucide="file-check" class="w-4 h-4"></i>
+            <span>Save & Build Resume</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- ==================== RIGHT COLUMN: REAL-TIME PAPER PREVIEW STUDIO ==================== -->
+      <div class="lg:col-span-6 sticky top-28 space-y-3">
+        
+        <!-- Paper Preview Window Container -->
+        <div class="clean-card rounded-2xl overflow-hidden border border-slate-300 shadow-xl bg-slate-100/60 backdrop-blur-md">
+          
+          <!-- Mock Browser Window Top Bar -->
+          <div class="bg-slate-900 text-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs border-b border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <div class="flex items-center gap-1.5">
+                <div class="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+              </div>
+              <span class="font-mono text-[11px] text-slate-300 font-semibold ml-1 hidden sm:inline">resume-live-render.pdf</span>
+            </div>
+            
+            <!-- Quick Template Switcher Pills directly on Preview -->
+            <div class="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+              {% for tkey, tinfo in templates.items() %}
+                <button type="button" onclick="setTemplate('{{ tkey }}')" id="preview-tab-{{ tkey }}"
+                  class="preview-tmpl-tab px-2.5 py-1 rounded-md text-[10.5px] font-semibold transition-all {% if (selected_template or 'modern') == tkey %}bg-blue-600 text-white shadow-xs{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/60{% endif %}">
+                  {{ tinfo.name.split('(')[0].strip() }}
+                </button>
+              {% endfor %}
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 text-[10.5px] text-slate-300 font-medium">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="previewFontLabel" class="text-slate-300 font-semibold">Inter</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Document Canvas Simulator (Standard A4 White Sheet) -->
+          <div class="p-4 sm:p-6 bg-slate-200/70 overflow-y-auto max-h-[calc(100vh-180px)] min-h-[700px] flex justify-center">
+            <div id="liveResumePreviewContainer" class="w-full max-w-[650px] bg-white rounded-lg shadow-md p-6 sm:p-8 text-slate-900 border border-slate-200 transition-all">
+              <!-- Dynamically populated by JS renderer -->
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-400 font-medium px-2">
+          <span>Standard A4 Print Dimensions • Crisp Vector Typography</span>
+          <span>ATS Compliant Hierarchy</span>
+        </div>
+      </div>
+
+    </div>
+  </form>
+
+  <!-- ==================== ANIMATED BUILDING OVERLAY ==================== -->
+  <div id="manualBuildingOverlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+    <div class="clean-card bg-white p-8 rounded-3xl text-center max-w-md w-full space-y-6 shadow-2xl border border-slate-200 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- Top Glowing Aura & Animated Icon -->
+      <div class="relative w-20 h-20 mx-auto flex items-center justify-center">
+        <div class="absolute inset-0 rounded-full bg-blue-500/20 animate-ping"></div>
+        <div class="w-16 h-16 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg relative z-10 animate-pulse">
+          <i data-lucide="layout" class="w-8 h-8 text-white"></i>
+        </div>
+      </div>
+
+      <!-- Title & Subtitle -->
+      <div>
+        <h3 class="text-xl font-extrabold text-slate-900 tracking-tight" id="manAnimTitle">Assembling Your Resume</h3>
+        <p class="text-xs text-slate-500 mt-1" id="manAnimSub">Formatting template styles & compiling PDF document...</p>
+      </div>
+
+      <!-- Animated Progress Bar -->
+      <div class="space-y-1.5">
+        <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200 p-0.5">
+          <div id="manAnimProgressBar" class="bg-gradient-to-r from-blue-600 via-indigo-600 to-slate-900 h-full rounded-full transition-all duration-300 w-[20%]"></div>
+        </div>
+        <div class="flex justify-between text-[11px] font-semibold text-slate-400 px-1">
+          <span id="manStepLabel">Step 1 of 3</span>
+          <span id="manPercent">20%</span>
+        </div>
+      </div>
+
+      <!-- Step List -->
+      <div class="space-y-2 text-left bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+        <div id="man-step-1" class="flex items-center gap-2.5 text-slate-900 font-bold transition-colors">
+          <div class="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">1</div>
+          <span>Validating customized profile sections & skills...</span>
+        </div>
+        <div id="man-step-2" class="flex items-center gap-2.5 text-slate-400 font-medium transition-colors">
+          <div class="w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">2</div>
+          <span>Applying custom font & accent theme...</span>
+        </div>
+        <div id="man-step-3" class="flex items-center gap-2.5 text-slate-400 font-medium transition-colors">
+          <div class="w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">3</div>
+          <span>Rendering PDF, Word (.docx) & Web preview...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Preload Google Fonts for preview -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700;900&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=JetBrains+Mono:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700;900&display=swap">
+
+<script>
+  let activeTemplate = "{{ selected_template or 'modern' }}";
+  let activeAccent = "#2563eb";
+  let activeFont = "{{ selected_font or 'inter' }}";
+  let isSinglePage = false;
+  let includeQr = true;
+  let includePhoto = true;
+
+  const fontFamiliesMap = {
+    'inter': "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    'roboto': "'Roboto', -apple-system, BlinkMacSystemFont, sans-serif",
+    'merriweather': "'Merriweather', 'Georgia', serif",
+    'jetbrains': "'JetBrains Mono', 'Consolas', 'Courier New', monospace",
+    'playfair': "'Playfair Display', 'Times New Roman', serif",
+    'lato': "'Lato', 'Helvetica Neue', Arial, sans-serif"
+  };
+
+  const fontLabelsMap = {
+    'inter': 'Inter',
+    'roboto': 'Roboto',
+    'merriweather': 'Merriweather',
+    'jetbrains': 'JetBrains Mono',
+    'playfair': 'Playfair Display',
+    'lato': 'Lato'
+  };
+
+  // Master profile backup for Reset button
+  const masterProfileData = {
+    personal_info: {
+      full_name: {{ (profile.full_name or '')|tojson }},
+      professional_title: {{ (profile.professional_title or '')|tojson }},
+      email: {{ (profile.email or '')|tojson }},
+      phone: {{ (profile.phone or '')|tojson }},
+      location: {{ (profile.location or '')|tojson }},
+      linkedin_url: {{ (profile.linkedin_url or '')|tojson }},
+      github_url: {{ (profile.github_url or '')|tojson }},
+      portfolio_url: {{ (profile.portfolio_url or '')|tojson }},
+      photo_url: {{ (profile.profile_photo_url or '')|tojson }}
+    },
+    summary: {{ (profile.summary or '')|tojson }},
+    skills: {{ (profile.skills or [])|tojson }},
+    experiences: {{ (profile.experiences or [])|tojson }},
+    educations: {{ (profile.educations or [])|tojson }},
+    projects: {{ (profile.projects or [])|tojson }},
+    certifications: {{ (profile.certifications or [])|tojson }}
+  };
+
+  let experiencesData = Array.isArray(masterProfileData.experiences) ? JSON.parse(JSON.stringify(masterProfileData.experiences)) : [];
+  let educationsData = Array.isArray(masterProfileData.educations) ? JSON.parse(JSON.stringify(masterProfileData.educations)) : [];
+  let projectsData = Array.isArray(masterProfileData.projects) ? JSON.parse(JSON.stringify(masterProfileData.projects)) : [];
+  let certsData = Array.isArray(masterProfileData.certifications) ? JSON.parse(JSON.stringify(masterProfileData.certifications)) : [];
+
+  function safeCreateIcons() {
+    try {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    } catch (e) {
+      console.warn('Lucide icon rendering warning:', e);
+    }
+  }
+
+  function handleManualPhotoUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Image is too large! Please select a photo under 2MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64 = e.target.result;
+      const edPhoto = document.getElementById('ed_photo_url');
+      if (edPhoto) edPhoto.value = base64;
+      const img = document.getElementById('manualPhotoImg');
+      const placeholder = document.getElementById('manualPhotoPlaceholder');
+      if (img) {
+        img.src = base64;
+        img.classList.remove('hidden');
+      }
+      if (placeholder) placeholder.classList.add('hidden');
+      const status = document.getElementById('manualPhotoStatus');
+      if (status) status.innerText = "Custom photo selected (" + (file.name || 'image') + ")";
+      const btnRemove = document.getElementById('btnRemoveManualPhoto');
+      if (btnRemove) btnRemove.classList.remove('hidden');
+      syncPreview();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeManualPhoto() {
+    const edPhoto = document.getElementById('ed_photo_url');
+    if (edPhoto) edPhoto.value = '';
+    const img = document.getElementById('manualPhotoImg');
+    const placeholder = document.getElementById('manualPhotoPlaceholder');
+    if (img) {
+      img.src = '';
+      img.classList.add('hidden');
+    }
+    if (placeholder) placeholder.classList.remove('hidden');
+    const status = document.getElementById('manualPhotoStatus');
+    if (status) status.innerText = "No photo selected (optional)";
+    const btnRemove = document.getElementById('btnRemoveManualPhoto');
+    if (btnRemove) btnRemove.classList.add('hidden');
+    const inputPhoto = document.getElementById('manualPhotoInput');
+    if (inputPhoto) inputPhoto.value = '';
+    syncPreview();
+  }
+
+  function toggleQrOption(checked) {
+    includeQr = checked;
+    const fQr = document.getElementById('form_include_qr');
+    if (fQr) fQr.value = checked ? '1' : '0';
+    syncPreview();
+  }
+
+  function togglePhotoOption(checked) {
+    includePhoto = checked;
+    const fPhoto = document.getElementById('form_include_photo');
+    if (fPhoto) fPhoto.value = checked ? '1' : '0';
+    syncPreview();
+  }
+
+  function setTemplate(tmplKey) {
+    activeTemplate = tmplKey;
+    const fTmpl = document.getElementById('form_template_name');
+    if (fTmpl) fTmpl.value = tmplKey;
+    
+    document.querySelectorAll('.tmpl-btn').forEach(b => {
+      b.className = 'tmpl-btn group relative p-3.5 rounded-xl text-left border transition-all cursor-pointer border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50/70';
+      const check = b.querySelector('[data-lucide="check"]');
+      if (check) check.remove();
+      const desc = b.querySelector('.text-\\[11px\\]');
+      if (desc) desc.className = 'text-[11px] text-slate-500 mt-1 font-medium';
+    });
+
+    const activeBtn = document.getElementById('btn-tmpl-' + tmplKey);
+    if (activeBtn) {
+      activeBtn.className = 'tmpl-btn group relative p-3.5 rounded-xl text-left border transition-all cursor-pointer border-slate-950 bg-slate-950 text-white shadow-md';
+      const desc = activeBtn.querySelector('.text-\\[11px\\]');
+      if (desc) desc.className = 'text-[11px] text-slate-300 mt-1 font-medium';
+    }
+
+    // Update paper preview top bar tabs
+    document.querySelectorAll('.preview-tmpl-tab').forEach(pt => {
+      pt.className = 'preview-tmpl-tab px-2.5 py-1 rounded-md text-[10.5px] font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/60';
+    });
+    const activePreviewTab = document.getElementById('preview-tab-' + tmplKey);
+    if (activePreviewTab) {
+      activePreviewTab.className = 'preview-tmpl-tab px-2.5 py-1 rounded-md text-[10.5px] font-semibold transition-all bg-blue-600 text-white shadow-xs';
+    }
+    
+    syncPreview();
+    safeCreateIcons();
+  }
+
+  function setFontFamily(fkey) {
+    activeFont = fkey;
+    const fFont = document.getElementById('form_font_name');
+    if (fFont) fFont.value = fkey;
+
+    document.querySelectorAll('.font-btn').forEach(b => {
+      b.className = 'font-btn p-2.5 rounded-xl text-left border transition-all cursor-pointer border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50';
+      const desc = b.querySelector('.text-\\[10px\\]');
+      if (desc) desc.className = 'text-[10px] text-slate-400 truncate mt-0.5';
+    });
+
+    const activeBtn = document.getElementById('btn-font-' + fkey);
+    if (activeBtn) {
+      activeBtn.className = 'font-btn p-2.5 rounded-xl text-left border transition-all cursor-pointer border-slate-950 bg-slate-900 text-white shadow-sm';
+      const desc = activeBtn.querySelector('.text-\\[10px\\]');
+      if (desc) desc.className = 'text-[10px] text-slate-300 truncate mt-0.5';
+    }
+
+    const fontLabel = document.getElementById('previewFontLabel');
+    if (fontLabel) fontLabel.innerText = fontLabelsMap[fkey] || 'Inter';
+
+    syncPreview();
+  }
+
+  function setAccentColor(colHex) {
+    activeAccent = colHex;
+    const fColor = document.getElementById('form_accent_color');
+    if (fColor) fColor.value = colHex;
+    document.querySelectorAll('.color-swatch').forEach(s => {
+      if (s.dataset.color === colHex) {
+        s.className = 'color-swatch relative w-6 h-6 rounded-full border border-black/10 transition-all hover:scale-115 focus:outline-none ring-2 ring-slate-900 ring-offset-2 scale-110';
+      } else {
+        s.className = 'color-swatch relative w-6 h-6 rounded-full border border-black/10 transition-all hover:scale-115 focus:outline-none';
+      }
+    });
+    syncPreview();
+  }
+
+  function toggleSinglePage(checked) {
+    isSinglePage = checked;
+    const fMode = document.getElementById('form_single_page_mode');
+    if (fMode) fMode.value = checked ? '1' : '0';
+    syncPreview();
+  }
+
+  function resetToMasterProfile() {
+    if (!confirm("Reset all form fields and items back to your Master Profile defaults?")) return;
+    
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    setVal('ed_name', masterProfileData.personal_info.full_name);
+    setVal('input_target_role', masterProfileData.personal_info.professional_title);
+    setVal('ed_email', masterProfileData.personal_info.email);
+    setVal('ed_phone', masterProfileData.personal_info.phone);
+    setVal('ed_location', masterProfileData.personal_info.location);
+    setVal('ed_linkedin', masterProfileData.personal_info.linkedin_url);
+    setVal('ed_github', masterProfileData.personal_info.github_url);
+    setVal('ed_summary', masterProfileData.summary);
+    setVal('ed_skills', (masterProfileData.skills || []).join(', '));
+    
+    if (masterProfileData.personal_info.photo_url) {
+      setVal('ed_photo_url', masterProfileData.personal_info.photo_url);
+      const img = document.getElementById('manualPhotoImg');
+      const placeholder = document.getElementById('manualPhotoPlaceholder');
+      if (img) {
+        img.src = masterProfileData.personal_info.photo_url;
+        img.classList.remove('hidden');
+      }
+      if (placeholder) placeholder.classList.add('hidden');
+      const st = document.getElementById('manualPhotoStatus');
+      if (st) st.innerText = "Photo loaded from Master Profile";
+    } else {
+      removeManualPhoto();
+    }
+
+    experiencesData = Array.isArray(masterProfileData.experiences) ? JSON.parse(JSON.stringify(masterProfileData.experiences)) : [];
+    educationsData = Array.isArray(masterProfileData.educations) ? JSON.parse(JSON.stringify(masterProfileData.educations)) : [];
+    projectsData = Array.isArray(masterProfileData.projects) ? JSON.parse(JSON.stringify(masterProfileData.projects)) : [];
+    certsData = Array.isArray(masterProfileData.certifications) ? JSON.parse(JSON.stringify(masterProfileData.certifications)) : [];
+
+    renderExperienceCards();
+    renderEducationCards();
+    renderProjectCards();
+    renderCertCards();
+    syncPreview();
+  }
+
+  // ==================== WORK EXPERIENCE REPEATER ====================
+  function renderExperienceCards() {
+    const container = document.getElementById('ed_experience_list');
+    if (!container) return;
+    container.innerHTML = '';
+    experiencesData.forEach((exp, idx) => {
+      const card = document.createElement('div');
+      card.className = "p-3.5 bg-slate-50 border border-slate-200/90 rounded-xl space-y-2.5 relative text-xs group hover:border-slate-300 transition-all";
+      card.innerHTML = `
+        <button type="button" onclick="removeExp(${idx})" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-slate-100" title="Remove Experience">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5 pointer-events-none"></i>
+        </button>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pr-6">
+          <input type="text" value="${exp.title || ''}" placeholder="Job Title / Role" oninput="updateExpField(${idx}, 'title', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white font-semibold">
+          <input type="text" value="${exp.company || ''}" placeholder="Company Name" oninput="updateExpField(${idx}, 'company', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white font-medium">
+          <input type="text" value="${exp.start_date || ''}" placeholder="Start Date (e.g. 2021)" oninput="updateExpField(${idx}, 'start_date', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white">
+          <input type="text" value="${exp.end_date || ''}" placeholder="End Date (e.g. Present)" oninput="updateExpField(${idx}, 'end_date', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white">
+        </div>
+        <textarea rows="2" placeholder="Key accomplishment bullets (one per line)..." oninput="updateExpHighlights(${idx}, this.value)" class="clean-input w-full p-2.5 rounded-lg bg-white text-xs leading-relaxed">${Array.isArray(exp.highlights) ? exp.highlights.join('\n') : (exp.highlights || '')}</textarea>
+      `;
+      container.appendChild(card);
+    });
+    safeCreateIcons();
+  }
+
+  function addExperienceCard() {
+    experiencesData.push({ title: 'Software Engineer', company: 'Company Name', start_date: '2023', end_date: 'Present', highlights: ['Accomplished key milestones using relevant tech stack...'] });
+    renderExperienceCards();
+    syncPreview();
+  }
+
+  function removeExp(idx) {
+    experiencesData.splice(idx, 1);
+    renderExperienceCards();
+    syncPreview();
+  }
+
+  function updateExpField(idx, field, val) {
+    if (experiencesData[idx]) {
+      experiencesData[idx][field] = val;
+      syncPreview();
+    }
+  }
+
+  function updateExpHighlights(idx, val) {
+    if (experiencesData[idx]) {
+      experiencesData[idx].highlights = val.split('\n').filter(l => l.trim().length > 0);
+      syncPreview();
+    }
+  }
+
+  // ==================== EDUCATION REPEATER ====================
+  function renderEducationCards() {
+    const container = document.getElementById('ed_education_list');
+    if (!container) return;
+    container.innerHTML = '';
+    educationsData.forEach((edu, idx) => {
+      const card = document.createElement('div');
+      card.className = "p-3 bg-slate-50 border border-slate-200/90 rounded-xl space-y-2 relative text-xs";
+      card.innerHTML = `
+        <button type="button" onclick="removeEdu(${idx})" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-rose-600 p-1" title="Remove Degree">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5 pointer-events-none"></i>
+        </button>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pr-6">
+          <input type="text" value="${edu.degree || ''}" placeholder="Degree (e.g. B.S. in CS)" oninput="updateEduField(${idx}, 'degree', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white font-semibold">
+          <input type="text" value="${edu.institution || ''}" placeholder="Institution / University" oninput="updateEduField(${idx}, 'institution', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white">
+          <input type="text" value="${edu.graduation_date || ''}" placeholder="Year (e.g. 2022)" oninput="updateEduField(${idx}, 'graduation_date', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white">
+        </div>
+        <div class="grid grid-cols-1 gap-2">
+          <input type="text" value="${edu.details || ''}" placeholder="Grade / CGPA / Percentage / Marks / Honors (e.g. CGPA: 3.9/4.0 • 88% Marks)" oninput="updateEduField(${idx}, 'details', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white text-[11px] text-slate-700">
+        </div>
+      `;
+      container.appendChild(card);
+    });
+    safeCreateIcons();
+  }
+
+  function addEducationCard() {
+    educationsData.push({ degree: 'B.S. in Computer Science', institution: 'University', graduation_date: '2023', details: 'CGPA: 3.8/4.0' });
+    renderEducationCards();
+    syncPreview();
+  }
+
+  function removeEdu(idx) {
+    educationsData.splice(idx, 1);
+    renderEducationCards();
+    syncPreview();
+  }
+
+  function updateEduField(idx, field, val) {
+    if (educationsData[idx]) {
+      educationsData[idx][field] = val;
+      syncPreview();
+    }
+  }
+
+  // ==================== PROJECTS REPEATER ====================
+  function renderProjectCards() {
+    const container = document.getElementById('ed_projects_list');
+    if (!container) return;
+    container.innerHTML = '';
+    projectsData.forEach((proj, idx) => {
+      const card = document.createElement('div');
+      card.className = "p-3 bg-slate-50 border border-slate-200/90 rounded-xl space-y-2 relative text-xs";
+      card.innerHTML = `
+        <button type="button" onclick="removeProj(${idx})" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-rose-600 p-1" title="Remove Project">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5 pointer-events-none"></i>
+        </button>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pr-6">
+          <input type="text" value="${proj.name || ''}" placeholder="Project Title" oninput="updateProjField(${idx}, 'name', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white font-semibold">
+          <input type="text" value="${Array.isArray(proj.technologies) ? proj.technologies.join(', ') : (proj.technologies || '')}" placeholder="Tech Stack (e.g. Python, Docker)" oninput="updateProjTech(${idx}, this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white">
+        </div>
+        <textarea rows="1" placeholder="Brief project impact & description..." oninput="updateProjField(${idx}, 'description', this.value)" class="clean-input w-full p-2 rounded-lg bg-white text-xs">${proj.description || ''}</textarea>
+      `;
+      container.appendChild(card);
+    });
+    safeCreateIcons();
+  }
+
+  function addProjectCard() {
+    projectsData.push({ name: 'Distributed Caching Engine', technologies: ['Python', 'Redis', 'Docker'], description: 'Designed high-throughput key-value system...' });
+    renderProjectCards();
+    syncPreview();
+  }
+
+  function removeProj(idx) {
+    projectsData.splice(idx, 1);
+    renderProjectCards();
+    syncPreview();
+  }
+
+  function updateProjField(idx, field, val) {
+    if (projectsData[idx]) {
+      projectsData[idx][field] = val;
+      syncPreview();
+    }
+  }
+
+  function updateProjTech(idx, val) {
+    if (projectsData[idx]) {
+      projectsData[idx].technologies = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      syncPreview();
+    }
+  }
+
+  // ==================== CERTIFICATIONS REPEATER ====================
+  function renderCertCards() {
+    const container = document.getElementById('ed_certs_list');
+    if (!container) return;
+    container.innerHTML = '';
+    certsData.forEach((cert, idx) => {
+      const card = document.createElement('div');
+      card.className = "p-3 bg-slate-50 border border-slate-200/90 rounded-xl space-y-2 relative text-xs";
+      card.innerHTML = `
+        <button type="button" onclick="removeCert(${idx})" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-rose-600 p-1" title="Remove Cert">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5 pointer-events-none"></i>
+        </button>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pr-6">
+          <input type="text" value="${cert.name || ''}" placeholder="Certification Name" oninput="updateCertField(${idx}, 'name', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white font-semibold">
+          <input type="text" value="${cert.issuer || ''}" placeholder="Issuer (e.g. AWS)" oninput="updateCertField(${idx}, 'issuer', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white">
+          <input type="text" value="${cert.date || ''}" placeholder="Year" oninput="updateCertField(${idx}, 'date', this.value)" class="clean-input rounded-lg px-2.5 py-1.5 bg-white">
+        </div>
+      `;
+      container.appendChild(card);
+    });
+    safeCreateIcons();
+  }
+
+  function addCertCard() {
+    certsData.push({ name: 'AWS Certified Solutions Architect', issuer: 'Amazon Web Services', date: '2023' });
+    renderCertCards();
+    syncPreview();
+  }
+
+  function removeCert(idx) {
+    certsData.splice(idx, 1);
+    renderCertCards();
+    syncPreview();
+  }
+
+  function updateCertField(idx, field, val) {
+    if (certsData[idx]) {
+      certsData[idx][field] = val;
+      syncPreview();
+    }
+  }
+
+  // ==================== LIVE OBJECT COMPILER & PREVIEW SYNC ====================
+  function getActiveResumeObject() {
+    const getVal = (id) => {
+      const el = document.getElementById(id);
+      return el ? el.value : '';
+    };
+
+    const skills = getVal('ed_skills').split(',').map(s => s.trim()).filter(s => s.length > 0);
+    const photoVal = getVal('ed_photo_url');
+    const targetRoleVal = getVal('input_target_role') || getVal('ed_name') || 'Professional';
+
+    return {
+      target_role: targetRoleVal,
+      target_company: '',
+      match_score: 100,
+      resume: {
+        personal_info: {
+          full_name: getVal('ed_name') || 'Your Full Name',
+          professional_title: getVal('input_target_role'),
+          email: getVal('ed_email'),
+          phone: getVal('ed_phone'),
+          location: getVal('ed_location'),
+          linkedin_url: getVal('ed_linkedin'),
+          github_url: getVal('ed_github'),
+          portfolio_url: '',
+          photo_url: photoVal
+        },
+        summary: getVal('ed_summary'),
+        core_competencies: skills,
+        experience: experiencesData,
+        education: educationsData,
+        projects: projectsData,
+        certifications: certsData
+      }
+    };
+  }
+
+  function syncPreview() {
+    try {
+      const container = document.getElementById('liveResumePreviewContainer');
+      if (!container) return;
+
+      const payload = getActiveResumeObject();
+      const res = payload.resume;
+      const selectedCssFont = fontFamiliesMap[activeFont] || fontFamiliesMap['inter'];
+
+      const hasPhoto = includePhoto && res.personal_info.photo_url;
+      const photoImgTag = hasPhoto ? `<img src="${res.personal_info.photo_url}" style="width:56px; height:56px; border-radius:50%; object-fit:cover; border:2px solid ${activeAccent}; flex-shrink:0;">` : '';
+      const qrTag = includeQr ? `
+        <div style="text-align:center; padding:4px 6px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:8.5px; color:#475569; display:inline-flex; align-items:center; gap:4px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:${activeAccent};"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+          <div style="text-align:left; line-height:1.1;"><strong>Scan QR</strong><br><span style="font-size:7.5px; color:#64748b;">Public Link</span></div>
+        </div>
+      ` : '';
+
+      let contactsHtml = [];
+      if (res.personal_info.email) contactsHtml.push(`<span>Email: ${res.personal_info.email}</span>`);
+      if (res.personal_info.phone) contactsHtml.push(`<span>Tel: ${res.personal_info.phone}</span>`);
+      if (res.personal_info.location) contactsHtml.push(`<span>Loc: ${res.personal_info.location}</span>`);
+      if (res.personal_info.linkedin_url) contactsHtml.push(`<span>LinkedIn: ${res.personal_info.linkedin_url}</span>`);
+      if (res.personal_info.github_url) contactsHtml.push(`<span>GitHub: ${res.personal_info.github_url}</span>`);
+
+      let skillsHtml = (res.core_competencies || []).map(s => 
+        `<span style="background:#f1f5f9; border:1px solid #e2e8f0; color:#1e293b; padding:2px 7px; border-radius:4px; font-size:10px; font-weight:600; display:inline-block; margin:2px 1px;">${s}</span>`
+      ).join(' ');
+
+      let expHtml = (res.experience || []).map(exp => `
+        <div style="margin-bottom:${isSinglePage ? '6px' : '10px'};">
+          <div style="display:flex; justify-content:space-between; font-weight:700; font-size:12px; color:#0f172a;">
+            <span>${exp.title || 'Role'} <span style="color:${activeAccent}; font-weight:600;"> • ${exp.company || ''}</span></span>
+            <span style="font-size:10.5px; color:#64748b; font-weight:normal;">${exp.start_date || ''} – ${exp.end_date || ''}</span>
+          </div>
+          <ul style="margin-top:2px; margin-left:16px; list-style-type:disc; font-size:11px; color:#334155; line-height:1.4;">
+            ${(exp.highlights || []).map(h => `<li style="margin-bottom:2px;">${h}</li>`).join('')}
+          </ul>
+        </div>
+      `).join('');
+
+      let eduHtml = (res.education || []).map(edu => `
+        <div style="font-size:11px; margin-bottom:5px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline;">
+            <span><strong style="color:#0f172a;">${edu.degree || ''}</strong> – <span style="color:${activeAccent}; font-weight:600;">${edu.institution || ''}</span></span>
+            <span style="color:#64748b; font-size:10.5px;">${edu.graduation_date || ''}</span>
+          </div>
+          ${edu.details ? `
+            <div style="font-size:10px; color:#475569; margin-top:1px; display:flex; align-items:center; gap:4px;">
+              <span style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:600; padding:1px 5px; border-radius:3px; font-size:9px;">Score / Honors</span>
+              <span>${edu.details}</span>
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+
+      let projHtml = (res.projects || []).map(proj => `
+        <div style="font-size:11px; margin-bottom:5px;">
+          <div><strong style="color:#0f172a;">${proj.name || ''}</strong> ${proj.technologies && proj.technologies.length ? `<span style="font-size:10px; color:#64748b;">(${proj.technologies.join(', ')})</span>` : ''}</div>
+          ${proj.description ? `<div style="font-size:10.5px; color:#334155; margin-top:1px;">${proj.description}</div>` : ''}
+        </div>
+      `).join('');
+
+      let certHtml = (res.certifications || []).map(c => `
+        <div style="font-size:11px; color:#334155; margin-bottom:2px;">
+          <strong>${c.name || ''}</strong> – ${c.issuer || ''} ${c.date ? `(${c.date})` : ''}
+        </div>
+      `).join('');
+
+      // RENDER: Creative Sidebar Template
+      if (activeTemplate === 'creative_sidebar') {
+        container.innerHTML = `
+          <div style="display:table; width:100%; font-family:${selectedCssFont}; min-height:550px;">
+            <div style="display:table-cell; width:34%; background:#f8fafc; border-right:2px solid #e2e8f0; padding:12px 10px; vertical-align:top;">
+              ${photoImgTag ? `<div style="margin-bottom:8px; text-align:center;">${photoImgTag}</div>` : ''}
+              <div style="font-size:18px; font-weight:800; color:#0f172a; line-height:1.15;">${res.personal_info.full_name}</div>
+              <div style="font-size:11px; font-weight:700; color:${activeAccent}; margin-top:3px; margin-bottom:10px;">${res.personal_info.professional_title || ''}</div>
+              
+              <div style="font-size:10px; font-weight:bold; text-transform:uppercase; color:${activeAccent}; border-bottom:1px solid #cbd5e1; padding-bottom:2px; margin-bottom:6px;">Contact</div>
+              <div style="font-size:9.5px; color:#475569; margin-bottom:14px; line-height:1.4;">
+                ${contactsHtml.join('<br>')}
+              </div>
+
+              <div style="font-size:10px; font-weight:bold; text-transform:uppercase; color:${activeAccent}; border-bottom:1px solid #cbd5e1; padding-bottom:2px; margin-bottom:6px;">Skills</div>
+              <div style="margin-bottom:14px;">${skillsHtml}</div>
+
+              ${eduHtml ? `
+                <div style="font-size:10px; font-weight:bold; text-transform:uppercase; color:${activeAccent}; border-bottom:1px solid #cbd5e1; padding-bottom:2px; margin-bottom:6px;">Education</div>
+                <div style="margin-bottom:14px;">${eduHtml}</div>
+              ` : ''}
+
+              ${certHtml ? `
+                <div style="font-size:10px; font-weight:bold; text-transform:uppercase; color:${activeAccent}; border-bottom:1px solid #cbd5e1; padding-bottom:2px; margin-bottom:6px;">Certifications</div>
+                <div>${certHtml}</div>
+              ` : ''}
+
+              ${qrTag ? `<div style="margin-top:16px; text-align:center;">${qrTag}</div>` : ''}
+            </div>
+
+            <div style="display:table-cell; width:66%; padding:14px 16px; vertical-align:top;">
+              ${res.summary ? `
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:${activeAccent}; border-bottom:1.5px solid ${activeAccent}; padding-bottom:2px; margin-bottom:6px;">Executive Summary</div>
+                <div style="font-size:11px; color:#334155; line-height:1.4; margin-bottom:12px;">${res.summary}</div>
+              ` : ''}
+              
+              ${expHtml ? `
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:${activeAccent}; border-bottom:1.5px solid ${activeAccent}; padding-bottom:2px; margin-bottom:6px;">Experience</div>
+                ${expHtml}
+              ` : ''}
+
+              ${projHtml ? `
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:${activeAccent}; border-bottom:1.5px solid ${activeAccent}; padding-bottom:2px; margin-bottom:6px; margin-top:10px;">Projects</div>
+                ${projHtml}
+              ` : ''}
+            </div>
+          </div>
+        `;
+      } 
+      // RENDER: Executive Serif Template
+      else if (activeTemplate === 'executive') {
+        container.innerHTML = `
+          <div style="font-family:${selectedCssFont}; font-size:12px; line-height:1.45;">
+            <div style="border-bottom:2px solid ${activeAccent}; padding-bottom:6px; margin-bottom:10px; ${hasPhoto || qrTag ? 'display:flex; align-items:center; justify-content:space-between; gap:12px;' : 'text-align:center;'}">
+              ${hasPhoto ? photoImgTag : ''}
+              <div style="${hasPhoto || qrTag ? 'flex:1; text-align:center;' : ''}">
+                <div style="font-size:22px; font-weight:bold; color:#000000; text-transform:uppercase; letter-spacing:1px; line-height:1.15;">${res.personal_info.full_name}</div>
+                <div style="font-size:11px; font-style:italic; color:${activeAccent}; margin-top:2px;">${res.personal_info.professional_title || ''}</div>
+                <div style="font-size:9.5px; color:#555555; margin-top:3px; display:flex; flex-wrap:wrap; justify-content:center; gap:8px;">
+                  ${contactsHtml.join(' • ')}
+                </div>
+              </div>
+              ${qrTag}
+            </div>
+
+            ${res.summary ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.8px; color:${activeAccent}; border-bottom:1px solid #d1d5db; padding-bottom:2px; margin-bottom:4px;">Executive Profile</div>
+                <div style="font-size:11px; color:#222222; text-align:justify;">${res.summary}</div>
+              </div>
+            ` : ''}
+
+            ${res.core_competencies && res.core_competencies.length ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.8px; color:${activeAccent}; border-bottom:1px solid #d1d5db; padding-bottom:2px; margin-bottom:4px;">Areas of Expertise</div>
+                <div style="font-size:10.5px; color:#333;">${(res.core_competencies || []).join('  •  ')}</div>
+              </div>
+            ` : ''}
+
+            <div style="margin-bottom:10px;">
+              <div style="font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.8px; color:${activeAccent}; border-bottom:1px solid #d1d5db; padding-bottom:2px; margin-bottom:4px;">Professional Experience</div>
+              ${expHtml}
+            </div>
+
+            ${eduHtml ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.8px; color:${activeAccent}; border-bottom:1px solid #d1d5db; padding-bottom:2px; margin-bottom:4px;">Education</div>
+                ${eduHtml}
+              </div>
+            ` : ''}
+
+            ${projHtml ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.8px; color:${activeAccent}; border-bottom:1px solid #d1d5db; padding-bottom:2px; margin-bottom:4px;">Key Projects</div>
+                ${projHtml}
+              </div>
+            ` : ''}
+
+            ${certHtml ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.8px; color:${activeAccent}; border-bottom:1px solid #d1d5db; padding-bottom:2px; margin-bottom:4px;">Certifications</div>
+                ${certHtml}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      } 
+      // RENDER: Tech Terminal Template
+      else if (activeTemplate === 'tech') {
+        container.innerHTML = `
+          <div style="font-family:${selectedCssFont}; font-size:11.5px; line-height:1.38;">
+            <div style="background:#0f172a; color:#fff; padding:10px 14px; border-radius:6px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+              <div style="${hasPhoto ? 'display:flex; align-items:center; gap:12px;' : ''}">
+                ${hasPhoto ? photoImgTag : ''}
+                <div>
+                  <div style="font-size:18px; font-weight:bold; color:#38bdf8; line-height:1.15;">&gt; ${res.personal_info.full_name}</div>
+                  <div style="font-size:10px; color:#94a3b8; margin-top:2px;">// ${res.personal_info.professional_title || 'Developer'}</div>
+                  <div style="font-size:9.5px; color:#cbd5e1; margin-top:3px; display:flex; flex-wrap:wrap; gap:8px;">
+                    ${contactsHtml.join(' | ')}
+                  </div>
+                </div>
+              </div>
+              ${qrTag}
+            </div>
+
+            ${res.summary ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:10.5px; font-weight:bold; color:${activeAccent}; border-bottom:1px solid ${activeAccent}; padding-bottom:2px; margin-bottom:4px; text-transform:uppercase;">## 01. Overview</div>
+                <div style="font-size:10.5px; color:#334155;">${res.summary}</div>
+              </div>
+            ` : ''}
+
+            ${res.core_competencies && res.core_competencies.length ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:10.5px; font-weight:bold; color:${activeAccent}; border-bottom:1px solid ${activeAccent}; padding-bottom:2px; margin-bottom:4px; text-transform:uppercase;">## 02. Stack & Capabilities</div>
+                <div>${skillsHtml}</div>
+              </div>
+            ` : ''}
+
+            <div style="margin-bottom:10px;">
+              <div style="font-size:10.5px; font-weight:bold; color:${activeAccent}; border-bottom:1px solid ${activeAccent}; padding-bottom:2px; margin-bottom:4px; text-transform:uppercase;">## 03. Engineering Experience</div>
+              ${expHtml}
+            </div>
+
+            ${projHtml ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:10.5px; font-weight:bold; color:${activeAccent}; border-bottom:1px solid ${activeAccent}; padding-bottom:2px; margin-bottom:4px; text-transform:uppercase;">## 04. Systems & Projects</div>
+                ${projHtml}
+              </div>
+            ` : ''}
+
+            ${eduHtml ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:10.5px; font-weight:bold; color:${activeAccent}; border-bottom:1px solid ${activeAccent}; padding-bottom:2px; margin-bottom:4px; text-transform:uppercase;">## 05. Education</div>
+                ${eduHtml}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      } 
+      // RENDER: Default Modern Template
+      else {
+        container.innerHTML = `
+          <div style="font-family:${selectedCssFont}; font-size:12px; line-height:1.4;">
+            <div style="border-bottom:2px solid ${activeAccent}; padding-bottom:6px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+              <div style="${hasPhoto ? 'display:flex; align-items:center; gap:12px;' : ''}">
+                ${hasPhoto ? photoImgTag : ''}
+                <div>
+                  <div style="font-size:20px; font-weight:bold; color:#0f172a; letter-spacing:-0.3px; line-height:1.15;">${res.personal_info.full_name}</div>
+                  <div style="font-size:11px; font-weight:600; color:${activeAccent}; text-transform:uppercase; margin-top:2px;">${res.personal_info.professional_title || ''}</div>
+                  <div style="font-size:9.5px; color:#64748b; margin-top:3px; display:flex; flex-wrap:wrap; gap:8px;">
+                    ${contactsHtml.join(' • ')}
+                  </div>
+                </div>
+              </div>
+              ${qrTag}
+            </div>
+
+            ${res.summary ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:#0f172a; border-bottom:1px solid #cbd5e1; padding-bottom:2px; margin-bottom:4px;">Executive Summary</div>
+                <div style="font-size:11px; color:#334155; text-align:justify;">${res.summary}</div>
+              </div>
+            ` : ''}
+
+            ${res.core_competencies && res.core_competencies.length ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:#0f172a; border-bottom:1px solid #cbd5e1; padding-bottom:2px; margin-bottom:4px;">Core Competencies & Skills</div>
+                <div style="display:flex; flex-wrap:wrap; gap:3px;">${skillsHtml}</div>
+              </div>
+            ` : ''}
+
+            ${eduHtml ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:#0f172a; border-bottom:1px solid #cbd5e1; padding-bottom:2px; margin-bottom:4px;">Education</div>
+                ${eduHtml}
+              </div>
+            ` : ''}
+
+            ${projHtml ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:#0f172a; border-bottom:1px solid #cbd5e1; padding-bottom:2px; margin-bottom:4px;">Key Projects</div>
+                ${projHtml}
+              </div>
+            ` : ''}
+
+            ${certHtml ? `
+              <div style="margin-bottom:10px;">
+                <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:#0f172a; border-bottom:1px solid #cbd5e1; padding-bottom:2px; margin-bottom:4px;">Certifications</div>
+                ${certHtml}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+    } catch (err) {
+      console.error('Error syncing preview:', err);
+    }
+  }
+
+  function submitBuilderForm() {
+    try {
+      const payload = getActiveResumeObject();
+      const hiddenInput = document.getElementById('edited_resume_json');
+      if (hiddenInput) hiddenInput.value = JSON.stringify(payload);
+
+      const overlay = document.getElementById('manualBuildingOverlay');
+      if (overlay) {
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+        safeCreateIcons();
+      }
+
+      const progressBar = document.getElementById('manAnimProgressBar');
+      const percentLabel = document.getElementById('manPercent');
+      const stepLabel = document.getElementById('manStepLabel');
+
+      if (progressBar) progressBar.style.width = '35%';
+      if (percentLabel) percentLabel.innerText = '35%';
+
+      setTimeout(() => {
+        if (progressBar) progressBar.style.width = '75%';
+        if (percentLabel) percentLabel.innerText = '75%';
+        if (stepLabel) stepLabel.innerText = 'Step 2 of 3';
+        const s2 = document.getElementById('man-step-2');
+        if (s2) {
+          s2.className = "flex items-center gap-2.5 text-slate-900 font-bold transition-colors";
+          const iconDiv = s2.querySelector('div');
+          if (iconDiv) {
+            iconDiv.className = "w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold";
+            iconDiv.innerHTML = `<i data-lucide="check" class="w-3 h-3 text-white pointer-events-none"></i>`;
+          }
+        }
+        safeCreateIcons();
+      }, 300);
+
+      setTimeout(() => {
+        if (progressBar) progressBar.style.width = '100%';
+        if (percentLabel) percentLabel.innerText = '100%';
+        if (stepLabel) stepLabel.innerText = 'Step 3 of 3';
+        const s3 = document.getElementById('man-step-3');
+        if (s3) {
+          s3.className = "flex items-center gap-2.5 text-slate-900 font-bold transition-colors";
+          const iconDiv = s3.querySelector('div');
+          if (iconDiv) {
+            iconDiv.className = "w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold";
+            iconDiv.innerHTML = `<i data-lucide="check" class="w-3 h-3 text-white pointer-events-none"></i>`;
+          }
+        }
+        safeCreateIcons();
+        const form = document.getElementById('builderForm');
+        if (form) form.submit();
+      }, 650);
+    } catch (e) {
+      console.error('Error in submitBuilderForm:', e);
+      const form = document.getElementById('builderForm');
+      if (form) form.submit();
+    }
+  }
+
+  // Safe Initial Boot on DOMContentLoaded and Immediate Execution
+  function bootBuilderStudio() {
+    try {
+      renderExperienceCards();
+      renderEducationCards();
+      renderProjectCards();
+      renderCertCards();
+      syncPreview();
+    } catch (e) {
+      console.error('Error during studio initialization:', e);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootBuilderStudio);
+  } else {
+    bootBuilderStudio();
+  }
+</script>
+{% endblock %}

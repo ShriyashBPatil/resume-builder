@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}Tailor Resume - ResumeAI{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="clean-card p-6 sm:p-8 rounded-2xl">
+    <div class="space-y-1">
+      <div class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        <i data-lucide="wand-2" class="w-3.5 h-3.5 text-slate-700"></i> AI Tailor
+      </div>
+      <h1 class="text-2xl font-bold text-slate-900">Tailor Resume for Job Description</h1>
+      <p class="text-xs sm:text-sm text-slate-500">
+        Paste any target job description. The AI aligns your master experiences, quantifies impact, computes ATS match scores, and structures bullet points.
+      </p>
+    </div>
+  </div>
+
+  <!-- Empty Master Profile Warning Banner -->
+  {% set has_profile = profile.full_name and (profile.summary or (profile.skills and profile.skills|length > 0)) %}
+  {% if not has_profile %}
+    <div class="p-5 rounded-xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2 rounded-lg bg-amber-100 text-amber-800">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h4 class="text-sm font-semibold text-amber-900">Your Master Career Profile is empty</h4>
+          <p class="text-xs text-amber-700">The AI generator uses your Master Profile to extract accomplishments and skills. Please fill in your details to get the best tailored resume.</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <a href="{{ url_for('profile') }}" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-800 hover:bg-amber-900 text-white transition-all flex items-center gap-1.5 shadow-sm whitespace-nowrap">
+          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Fill Profile Details
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('generate') }}" id="generateForm" class="space-y-6">
+    <input type="hidden" name="queue_ticket_id" id="queueTicketId" value="">
+
+    <!-- Model & Provider Selection -->
+    <div class="clean-card p-6 rounded-2xl space-y-4">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+        <i data-lucide="cpu" class="w-4 h-4 text-slate-500"></i> AI Model Configuration
+      </h3>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- Gemini Option -->
+        <label class="relative flex items-center p-3.5 rounded-xl border {{ 'border-slate-900 bg-slate-50' if selected_provider == 'gemini' else 'border-slate-200 bg-white' }} cursor-pointer hover:border-slate-400 transition-all">
+          <input type="radio" name="provider" value="gemini" class="text-slate-900 focus:ring-slate-900"
+            {{ 'checked' if selected_provider == 'gemini' else '' }} onchange="switchProvider('gemini')">
+          <div class="ml-3">
+            <div class="font-bold text-slate-900 text-sm">Google Gemini</div>
+            <div class="text-xs text-slate-500">Gemini 3.6 Flash / 3.7 Flash</div>
+          </div>
+        </label>
+
+        <!-- Groq Option -->
+        <label class="relative flex items-center p-3.5 rounded-xl border {{ 'border-slate-900 bg-slate-50' if selected_provider == 'groq' else 'border-slate-200 bg-white' }} cursor-pointer hover:border-slate-400 transition-all">
+          <input type="radio" name="provider" value="groq" class="text-slate-900 focus:ring-slate-900"
+            {{ 'checked' if selected_provider == 'groq' else '' }} onchange="switchProvider('groq')">
+          <div class="ml-3">
+            <div class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+              Groq Cloud 
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800">Queue Protected</span>
+            </div>
+            <div class="text-xs text-slate-500">GPT OSS 20B (1-at-a-time governor active)</div>
+          </div>
+        </label>
+      </div>
+
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
+        <i data-lucide="shield-alert" class="w-4 h-4 text-indigo-600 shrink-0"></i>
+        <span><strong>Fair-Queue Governor:</strong> When multiple users generate resumes simultaneously, requests run in a sequential FIFO queue (1-at-a-time) to guarantee 100% reliability.</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Select Model</label>
+          <select name="model_name" id="modelSelect" onchange="onModelChange()"
+            class="clean-input w-full rounded-lg px-3 py-2 text-sm bg-white font-medium">
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1 flex items-center justify-between">
+            <span id="apiKeyFieldLabel">Custom API Key Override</span>
+            <span id="apiKeyRequirementBadge" class="text-[10px] text-slate-400">Optional</span>
+          </label>
+          <input type="password" name="custom_api_key" id="customApiKeyInput" placeholder="Leave empty to use universal key"
+            class="clean-input w-full rounded-lg px-3 py-2 text-sm placeholder-slate-400">
+        </div>
+      </div>
+
+      <!-- BYOK Notice Banner -->
+      <div id="byokNotice" class="hidden p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2.5">
+        <i data-lucide="key" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+        <div>
+          <span class="font-bold">API Key Required:</span> This model (<span id="byokModelName" class="font-mono text-xs"></span>) is only available using your personal API key. Please enter your API key above or configure it in <a href="{{ url_for('settings') }}" class="underline font-semibold hover:text-amber-950" target="_blank">Settings</a>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Job Description Input -->
+    <div class="clean-card p-6 rounded-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <i data-lucide="briefcase" class="w-4 h-4 text-slate-500"></i> Target Job Description (JD)
+        </h3>
+        <button type="button" onclick="insertSampleJD()" class="text-xs text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1">
+          <i data-lucide="clipboard-copy" class="w-3.5 h-3.5"></i> Insert Sample JD
+        </button>
+      </div>
+
+      <div>
+        <textarea name="job_description" id="jobDesc" rows="8" required
+          placeholder="Paste the target job requirements, responsibilities, and qualifications here..."
+          class="clean-input w-full rounded-xl p-3.5 text-sm leading-relaxed">{{ job_description or '' }}</textarea>
+      </div>
+
+      <!-- Extra instructions / tuning -->
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+          Special Instructions / Focus Areas (Optional)
+        </label>
+        <input type="text" name="custom_instructions" value="{{ custom_instructions or '' }}"
+          placeholder="e.g. Highlight cloud infrastructure, scale, and leadership accomplishments."
+          class="clean-input w-full rounded-lg px-3.5 py-2 text-sm">
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="pt-2">
+      <button type="submit" id="generateBtn"
+        class="w-full py-3.5 px-6 rounded-xl font-bold text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all flex items-center justify-center gap-2">
+        <i data-lucide="sparkles" class="w-4 h-4"></i>
+        <span>Tailor Resume Now</span>
+      </button>
+    </div>
+  </form>
+
+  <!-- ==================== ANIMATED BUILDING OVERLAY WITH QUEUE PLACEMENT ==================== -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+    <div class="clean-card bg-white p-6 sm:p-8 rounded-3xl text-center max-w-md w-full space-y-5 shadow-2xl border border-slate-200 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- Top Glowing Aura & Animated Icon -->
+      <div class="relative w-16 h-16 mx-auto flex items-center justify-center">
+        <div id="iconAura" class="absolute inset-0 rounded-full bg-blue-500/20 animate-ping"></div>
+        <div id="iconBox" class="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg relative z-10 transform transition-transform animate-pulse">
+          <i data-lucide="sparkles" class="w-7 h-7 text-white" id="modalMainIcon"></i>
+        </div>
+      </div>
+
+      <!-- Title & Subtitle -->
+      <div>
+        <h3 class="text-xl font-extrabold text-slate-900 tracking-tight" id="animTitle">Engineering Tailored Resume</h3>
+        <p class="text-xs text-slate-500 mt-1" id="animSubtitle">Optimizing accomplishments with Google X-Y-Z formula...</p>
+      </div>
+
+      <!-- Live Queue Placement Card -->
+      <div id="queuePlacementCard" class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-1.5 transition-all">
+        <div class="flex items-center justify-between">
+          <span id="queueBadge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-wider">
+            <span id="queueDot" class="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse"></span>
+            <span id="queueBadgeText">Queue Status: Checking...</span>
+          </span>
+          <span class="text-[11px] font-bold text-slate-600" id="queueEstTime">Estimating...</span>
+        </div>
+        <p class="text-xs text-slate-700 font-medium" id="queueMessage">
+          Connecting to AI generation queue...
+        </p>
+      </div>
+
+      <!-- Animated Progress Bar -->
+      <div class="space-y-1.5">
+        <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200 p-0.5">
+          <div id="animProgressBar" class="bg-gradient-to-r from-blue-600 via-indigo-600 to-slate-900 h-full rounded-full transition-all duration-500 w-[15%]"></div>
+        </div>
+        <div class="flex justify-between text-[11px] font-semibold text-slate-400 px-1">
+          <span id="animStepLabel">Step 1 of 4</span>
+          <span id="animPercent">15%</span>
+        </div>
+      </div>
+
+      <!-- Step-by-Step Live Pipeline List -->
+      <div class="space-y-2 text-left bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+        <div id="step-1" class="flex items-center gap-2.5 text-slate-800 font-semibold transition-colors">
+          <div class="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">1</div>
+          <span>Parsing JD & extracting target competencies...</span>
+        </div>
+        <div id="step-2" class="flex items-center gap-2.5 text-slate-400 font-medium transition-colors">
+          <div class="w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">2</div>
+          <span>Aligning bullet points to Google X-Y-Z formula...</span>
+        </div>
+        <div id="step-3" class="flex items-center gap-2.5 text-slate-400 font-medium transition-colors">
+          <div class="w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">3</div>
+          <span>Scoring ATS match percentage & keyword gap...</span>
+        </div>
+        <div id="step-4" class="flex items-center gap-2.5 text-slate-400 font-medium transition-colors">
+          <div class="w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">4</div>
+          <span>Compiling PDF, Word (.docx) & Markdown layouts...</span>
+        </div>
+      </div>
+
+      <div class="text-[11px] text-slate-400 italic flex items-center justify-center gap-1.5">
+        <i data-lucide="lightbulb" class="w-3.5 h-3.5 text-amber-500"></i>
+        <span>Pro-Tip: Resumes with quantified business metrics receive 3.5x more recruiter callbacks.</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const modelOptions = {{ available_models|tojson }};
+  const isAdminUser = {{ 'true' if is_admin else 'false' }};
+  let selectedProvider = "{{ selected_provider or 'gemini' }}";
+  let selectedModel = "{{ selected_model or 'gemini-3.6-flash' }}";
+
+  function switchProvider(provider) {
+    selectedProvider = provider;
+    updateModelDropdown();
+  }
+
+  function updateModelDropdown() {
+    const select = document.getElementById('modelSelect');
+    select.innerHTML = '';
+    const models = modelOptions[selectedProvider] || [];
+    models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      opt.dataset.requiresKey = m.requires_user_key ? "true" : "false";
+      if (m.id === selectedModel) {
+        opt.selected = true;
+      }
+      select.appendChild(opt);
+    });
+    onModelChange();
+  }
+
+  function onModelChange() {
+    const select = document.getElementById('modelSelect');
+    const selectedOption = select.options[select.selectedIndex];
+    if (!selectedOption) return;
+
+    selectedModel = selectedOption.value;
+    const requiresKey = selectedOption.dataset.requiresKey === "true";
+    const byokNotice = document.getElementById('byokNotice');
+    const byokModelName = document.getElementById('byokModelName');
+    const badge = document.getElementById('apiKeyRequirementBadge');
+    const input = document.getElementById('customApiKeyInput');
+
+    if (requiresKey && !isAdminUser) {
+      byokNotice.classList.remove('hidden');
+      byokModelName.textContent = selectedOption.value;
+      badge.textContent = "Required for this model";
+      badge.className = "text-[10px] font-bold text-amber-600 uppercase tracking-wide";
+      input.placeholder = "Enter your personal API key (required)";
+      input.classList.add('border-amber-300', 'focus:ring-amber-500');
+    } else if (requiresKey && isAdminUser) {
+      byokNotice.classList.add('hidden');
+      badge.textContent = "Admin Universal Key Active";
+      badge.className = "text-[10px] font-bold text-indigo-600 uppercase tracking-wide";
+      input.placeholder = "Universal key ready (or enter custom key override)";
+      input.classList.remove('border-amber-300', 'focus:ring-amber-500');
+    } else {
+      byokNotice.classList.add('hidden');
+      badge.textContent = "Optional";
+      badge.className = "text-[10px] text-slate-400";
+      input.placeholder = "Leave empty to use universal key";
+      input.classList.remove('border-amber-300', 'focus:ring-amber-500');
+    }
+  }
+
+  updateModelDropdown();
+
+  function insertSampleJD() {
+    document.getElementById('jobDesc').value = `Job Title: Senior Backend Engineer - AI Applications
+Company: ScaleAI Technologies
+Location: Remote (US / Global)
+
+About the Role:
+We are looking for a Senior Backend Engineer to architect, build, and scale our core LLM application backend and real-time inference services. You will design reliable microservices, optimize high-throughput relational databases (MariaDB / PostgreSQL), and manage containerized production environments.
+
+Responsibilities:
+- Build high-scale REST APIs and worker queues using Python (Flask/FastAPI).
+- Integrate modern LLMs (Gemini, Llama/Groq) for automated data synthesis and workflows.
+- Optimize database schemas and queries in MariaDB / MySQL for low-latency queries.
+- Deploy, monitor, and scale services using Docker, Linux, and Cloud infrastructure.
+- Lead system design reviews and mentor junior engineering team members.
+
+Requirements:
+- 4+ years of professional backend engineering experience in Python.
+- Proven experience with relational databases (MariaDB, MySQL, or PostgreSQL) and caching (Redis).
+- Hands-on experience with LLM APIs (OpenAI, Gemini, Groq, or Anthropic).
+- Solid grasp of containerization with Docker and Linux system administration.
+- Strong communication skills and collaborative team mindset.`;
+  }
+
+  // Live Queue Ticket & Animated Pipeline Orchestrator
+  let currentTicketId = "";
+  let pollInterval = null;
+  let animStarted = false;
+
+  document.getElementById('generateForm').addEventListener('submit', function(e) {
+    // Generate unique client ticket ID
+    currentTicketId = "tkt_" + Date.now() + "_" + Math.random().toString(36).substring(2, 8);
+    document.getElementById('queueTicketId').value = currentTicketId;
+
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.classList.remove('hidden');
+    overlay.classList.add('flex');
+    lucide.createIcons();
+
+    // Notify backend queue of ticket
+    fetch('/api/queue/join?ticket_id=' + encodeURIComponent(currentTicketId))
+      .then(r => r.json())
+      .then(data => updateQueueUI(data))
+      .catch(() => {});
+
+    // Poll ticket queue position every 800ms
+    pollInterval = setInterval(checkQueuePlacement, 800);
+  });
+
+  function checkQueuePlacement() {
+    if (!currentTicketId) return;
+    fetch('/api/queue/ticket/' + encodeURIComponent(currentTicketId))
+      .then(r => r.json())
+      .then(data => updateQueueUI(data))
+      .catch(() => {});
+  }
+
+  function updateQueueUI(data) {
+    const card = document.getElementById('queuePlacementCard');
+    const badge = document.getElementById('queueBadge');
+    const badgeText = document.getElementById('queueBadgeText');
+    const dot = document.getElementById('queueDot');
+    const estTime = document.getElementById('queueEstTime');
+    const msg = document.getElementById('queueMessage');
+
+    if (!data) return;
+
+    if (data.status === 'queued' && data.position > 0) {
+      // In Queue
+      card.className = "p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-left space-y-1.5 transition-all";
+      badge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-200/80 text-amber-900 text-[10px] font-black uppercase tracking-wider";
+      dot.className = "w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse";
+      badgeText.innerText = "Queue Position #" + data.position;
+      estTime.innerText = "~" + data.estimated_wait_seconds + "s estimated wait";
+      estTime.className = "text-[11px] font-bold text-amber-800";
+      msg.className = "text-xs text-amber-900 font-medium";
+      msg.innerText = data.message || "Waiting for current generation to finish ahead of you...";
+
+      document.getElementById('animTitle').innerText = "In Generation Queue (Position #" + data.position + ")";
+      document.getElementById('animSubtitle').innerText = "Holding your spot in line. Your resume will automatically generate next!";
+    } else {
+      // Actively Processing or Next Up
+      card.className = "p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-left space-y-1.5 transition-all";
+      badge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 text-[10px] font-black uppercase tracking-wider";
+      dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping";
+      badgeText.innerText = "Active Generation";
+      estTime.innerText = "Generating Now";
+      estTime.className = "text-[11px] font-bold text-emerald-800";
+      msg.className = "text-xs text-emerald-900 font-medium";
+      msg.innerText = "Your request is currently being generated by the AI Engine!";
+
+      document.getElementById('animTitle').innerText = "Engineering Tailored Resume";
+      if (!animStarted) {
+        startProgressAnimation();
+      }
+    }
+  }
+
+  function startProgressAnimation() {
+    animStarted = true;
+    const progressBar = document.getElementById('animProgressBar');
+    const percentLabel = document.getElementById('animPercent');
+    const stepLabel = document.getElementById('animStepLabel');
+
+    const steps = [
+      { pct: 25, step: 1, text: "Step 1 of 4", sub: "Matching keywords & technical skills..." },
+      { pct: 55, step: 2, text: "Step 2 of 4", sub: "Engineering Google X-Y-Z bullet points..." },
+      { pct: 80, step: 3, text: "Step 3 of 4", sub: "Scoring ATS match percentage & analytics..." },
+      { pct: 95, step: 4, text: "Step 4 of 4", sub: "Formatting PDF & document structure..." }
+    ];
+
+    let current = 0;
+    const interval = setInterval(() => {
+      if (current < steps.length) {
+        const item = steps[current];
+        progressBar.style.width = item.pct + '%';
+        percentLabel.innerText = item.pct + '%';
+        stepLabel.innerText = item.text;
+        document.getElementById('animSubtitle').innerText = item.sub;
+
+        // Update step UI colors
+        for (let i = 1; i <= 4; i++) {
+          const el = document.getElementById('step-' + i);
+          const icon = el.querySelector('div');
+          if (i <= item.step) {
+            el.className = "flex items-center gap-2.5 text-slate-900 font-bold transition-colors";
+            icon.className = "w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold";
+            icon.innerHTML = "✓";
+          } else {
+            el.className = "flex items-center gap-2.5 text-slate-400 font-medium transition-colors";
+            icon.className = "w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold";
+            icon.innerText = i;
+          }
+        }
+        current++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 1800);
+  }
+</script>
+{% endblock %}

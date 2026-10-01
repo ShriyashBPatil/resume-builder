@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}AI Model Settings & API Keys - ResumeAI{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+  <div class="clean-card p-6 rounded-2xl">
+    <div class="flex items-center gap-3">
+      <div class="p-2 rounded-xl bg-slate-100 text-slate-800">
+        <i data-lucide="key" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-slate-900">AI Model & API Key Settings</h1>
+        <p class="text-xs text-slate-500">Configure your default AI model provider and optional custom API keys</p>
+      </div>
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('settings') }}" class="clean-card p-6 sm:p-8 rounded-2xl space-y-6">
+    <!-- Provider Selection -->
+    <div class="space-y-3">
+      <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600">Preferred AI Engine</label>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label class="relative flex items-center p-3.5 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-slate-400 transition-all">
+          <input type="radio" name="preferred_model_provider" value="gemini" class="text-slate-900 focus:ring-slate-900"
+            {{ 'checked' if (user.preferred_model_provider or 'gemini') == 'gemini' else '' }} onchange="updateModelList('gemini')">
+          <div class="ml-3">
+            <div class="font-bold text-slate-900 text-sm">Google Gemini</div>
+            <div class="text-xs text-slate-500">Gemini 3.6 Flash / 3.7 Flash</div>
+          </div>
+        </label>
+
+        <label class="relative flex items-center p-3.5 rounded-xl border border-slate-200 bg-white cursor-pointer hover:border-slate-400 transition-all">
+          <input type="radio" name="preferred_model_provider" value="groq" class="text-slate-900 focus:ring-slate-900"
+            {{ 'checked' if user.preferred_model_provider == 'groq' else '' }} onchange="updateModelList('groq')">
+          <div class="ml-3">
+            <div class="font-bold text-slate-900 text-sm">Groq Cloud (Default Key Ready)</div>
+            <div class="text-xs text-slate-500">GPT OSS 20B (Fast & Efficient)</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Default Model Selection -->
+    <div>
+      <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Default Model</label>
+      <select name="preferred_model" id="modelSelect"
+        class="clean-input w-full rounded-lg px-3 py-2 text-sm bg-white">
+      </select>
+    </div>
+
+    <div class="border-t border-slate-100 pt-5 space-y-4">
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Custom Individual API Keys</h3>
+        <p class="text-xs text-slate-500 mt-0.5">
+          Leave blank to use universal free system keys. Advanced BYOK models (e.g. Qwen 3.6/3.8, CanopyLabs Orpheus, Groq Compound, Llama Prompt Guard, GPT OSS 120B, Whisper Large) require entering your personal API key.
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+            Google Gemini API Key
+          </label>
+          <input type="password" name="gemini_api_key" value="{{ user.gemini_api_key or '' }}"
+            placeholder="AIzaSy..."
+            class="clean-input w-full rounded-lg px-3.5 py-2 text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+            Groq API Key
+          </label>
+          <input type="password" name="groq_api_key" value="{{ user.groq_api_key or '' }}"
+            placeholder="gsk_..."
+            class="clean-input w-full rounded-lg px-3.5 py-2 text-sm">
+          <p class="text-[11px] text-slate-400 mt-1">Universal default Groq key is already pre-configured system-wide.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="pt-2">
+      <button type="submit"
+        class="w-full py-2.5 px-4 rounded-lg font-medium text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all flex items-center justify-center gap-2">
+        <i data-lucide="save" class="w-4 h-4"></i> Save Settings
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const modelsData = {{ available_models|tojson }};
+  const currentProvider = "{{ user.preferred_model_provider or 'gemini' }}";
+  const currentModel = "{{ user.preferred_model or 'gemini-3.6-flash' }}";
+
+  function updateModelList(provider) {
+    const select = document.getElementById('modelSelect');
+    select.innerHTML = '';
+    const models = modelsData[provider] || [];
+    models.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      if (m.id === currentModel) {
+        opt.selected = true;
+      }
+      select.appendChild(opt);
+    });
+  }
+
+  updateModelList(currentProvider);
+</script>
+{% endblock %}

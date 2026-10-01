@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-white text-slate-900">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}AI Resume Tailor & Generator{% endblock %}</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              500: '#0f172a',
+              600: '#020617',
+              700: '#000000',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .clean-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+    }
+    .clean-input {
+      background-color: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #0f172a;
+      transition: all 0.15s ease;
+    }
+    .clean-input:focus {
+      border-color: #0f172a;
+      outline: none;
+      box-shadow: 0 0 0 1px #0f172a;
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f8fafc;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-50/50 text-slate-900 antialiased selection:bg-slate-900 selection:text-white">
+
+  <!-- Navigation Bar -->
+  <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+          <a href="{{ url_for('index') }}" class="flex items-center gap-2.5 font-bold text-lg tracking-tight text-slate-900 hover:opacity-90 transition-opacity">
+            <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white">
+              <i data-lucide="file-text" class="w-4 h-4"></i>
+            </div>
+            <span>Resume<span class="text-slate-500 font-medium">AI</span></span>
+          </a>
+        </div>
+
+        <!-- Desktop Links (Streamlined) -->
+        <div class="hidden md:flex items-center gap-2 lg:gap-3">
+          {% if session.user_id %}
+            <a href="{{ url_for('dashboard') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1.5">
+              <i data-lucide="layout-dashboard" class="w-4 h-4 text-slate-400"></i> Dashboard
+            </a>
+            <a href="{{ url_for('resumes_list') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1.5">
+              <i data-lucide="folder" class="w-4 h-4 text-slate-400"></i> Resumes
+            </a>
+            <a href="{{ url_for('applications_list') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1.5">
+              <i data-lucide="briefcase" class="w-4 h-4 text-slate-400"></i> Job Tracker
+            </a>
+            <a href="{{ url_for('build_manual') }}" class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1.5">
+              <i data-lucide="layout" class="w-4 h-4 text-slate-400"></i> Direct Builder
+            </a>
+
+            <div class="h-4 w-px bg-slate-200 mx-1"></div>
+
+            <!-- Prominent CTA -->
+            <a href="{{ url_for('generate') }}" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-sm">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Tailor Resume
+            </a>
+
+            <!-- User Menu Dropdown -->
+            <div class="relative" id="userMenuDropdownContainer">
+              <button type="button" id="userMenuBtn" onclick="toggleUserDropdown()" 
+                class="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-1.5 text-sm font-medium border border-transparent hover:border-slate-200">
+                <div class="w-7 h-7 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-700 font-bold text-xs">
+                  {{ session.username[:1].upper() if session.username else 'U' }}
+                </div>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+              </button>
+
+              <div id="userDropdownMenu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50 text-xs">
+                <div class="px-3.5 py-2 border-b border-slate-100">
+                  <div class="font-bold text-slate-900 truncate">{{ session.username }}</div>
+                  <div class="text-[11px] text-slate-400">{% if is_admin %}<span class="text-amber-600 font-bold">Admin Account</span>{% else %}Personal Account{% endif %}</div>
+                </div>
+                {% if is_admin %}
+                  <a href="{{ url_for('admin_dashboard') }}" class="flex items-center gap-2 px-3.5 py-2 text-amber-700 hover:bg-amber-50 font-bold">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-amber-600"></i> Admin Console
+                  </a>
+                {% endif %}
+                <a href="{{ url_for('profile') }}" class="flex items-center gap-2 px-3.5 py-2 text-slate-700 hover:bg-slate-50 font-medium">
+                  <i data-lucide="user" class="w-4 h-4 text-slate-400"></i> Master Profile
+                </a>
+                <a href="{{ url_for('settings') }}" class="flex items-center gap-2 px-3.5 py-2 text-slate-700 hover:bg-slate-50 font-medium">
+                  <i data-lucide="key" class="w-4 h-4 text-slate-400"></i> API & Settings
+                </a>
+                <div class="border-t border-slate-100 my-1"></div>
+                <a href="{{ url_for('logout') }}" class="flex items-center gap-2 px-3.5 py-2 text-rose-600 hover:bg-rose-50 font-medium">
+                  <i data-lucide="log-out" class="w-4 h-4 text-rose-500"></i> Log Out
+                </a>
+              </div>
+            </div>
+          {% else %}
+            <a href="{{ url_for('login') }}" class="px-3.5 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+              Log In
+            </a>
+            <a href="{{ url_for('register') }}" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-slate-900 hover:bg-slate-800 transition-colors text-white shadow-sm">
+              Get Started
+            </a>
+          {% endif %}
+        </div>
+
+        <!-- Mobile Hamburger Button -->
+        <div class="flex md:hidden items-center">
+          <button id="mobileMenuButton" type="button" aria-label="Toggle Navigation"
+            class="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all">
+            <i id="menuIconClosed" data-lucide="menu" class="w-6 h-6"></i>
+            <i id="menuIconOpen" data-lucide="x" class="w-6 h-6 hidden"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Dropdown Menu -->
+    <div id="mobileMenu" class="hidden md:hidden border-t border-slate-200 bg-white/95 backdrop-blur-md px-4 pt-3 pb-5 space-y-1.5 shadow-lg">
+      {% if session.user_id %}
+        <div class="px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-400">Menu</div>
+        <a href="{{ url_for('dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors">
+          <i data-lucide="layout-dashboard" class="w-4 h-4 text-slate-500"></i> Dashboard
+        </a>
+        <a href="{{ url_for('resumes_list') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors">
+          <i data-lucide="folder" class="w-4 h-4 text-slate-500"></i> Saved Resumes
+        </a>
+        <a href="{{ url_for('applications_list') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors">
+          <i data-lucide="briefcase" class="w-4 h-4 text-slate-500"></i> Job Tracker
+        </a>
+        <a href="{{ url_for('build_manual') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors">
+          <i data-lucide="layout" class="w-4 h-4 text-slate-500"></i> Direct Builder
+        </a>
+        <a href="{{ url_for('generate') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm">
+          <i data-lucide="sparkles" class="w-4 h-4"></i> Tailor Resume
+        </a>
+        <div class="border-t border-slate-100 pt-2 my-1">
+          {% if is_admin %}
+            <a href="{{ url_for('admin_dashboard') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-amber-700 bg-amber-50/70 hover:bg-amber-100/70 mb-1">
+              <i data-lucide="shield-check" class="w-4 h-4 text-amber-600"></i> Admin Console
+            </a>
+          {% endif %}
+          <a href="{{ url_for('profile') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">
+            <i data-lucide="user" class="w-4 h-4 text-slate-400"></i> Master Profile
+          </a>
+          <a href="{{ url_for('settings') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">
+            <i data-lucide="key" class="w-4 h-4 text-slate-400"></i> API & Settings
+          </a>
+          <a href="{{ url_for('logout') }}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors">
+            <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+          </a>
+        </div>
+      {% else %}
+        <a href="{{ url_for('login') }}" class="block px-3 py-2.5 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors">
+          Log In
+        </a>
+        <a href="{{ url_for('register') }}" class="block text-center px-3 py-2.5 rounded-lg text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-colors">
+          Get Started
+        </a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- Flash Messages -->
+  <div class="max-w-5xl mx-auto px-4 w-full mt-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          {% set alert_bg = 'bg-slate-100 border-slate-200 text-slate-800' %}
+          {% set alert_icon = 'info' %}
+          {% if category == 'success' %}
+            {% set alert_bg = 'bg-emerald-50 border-emerald-200 text-emerald-800' %}
+            {% set alert_icon = 'check-circle' %}
+          {% elif category == 'danger' %}
+            {% set alert_bg = 'bg-rose-50 border-rose-200 text-rose-800' %}
+            {% set alert_icon = 'alert-circle' %}
+          {% elif category == 'warning' %}
+            {% set alert_bg = 'bg-amber-50 border-amber-200 text-amber-800' %}
+            {% set alert_icon = 'alert-triangle' %}
+          {% endif %}
+          <div class="mb-3 p-3.5 rounded-lg border {{ alert_bg }} flex items-center justify-between text-sm">
+            <div class="flex items-center gap-2.5">
+              <i data-lucide="{{ alert_icon }}" class="w-4 h-4 flex-shrink-0"></i>
+              <span>{{ message }}</span>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-xs opacity-60 hover:opacity-100 p-1">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <!-- Main Content Container -->
+  <main class="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span>Powered by Gemini & Groq LLMs</span>
+      </div>
+      <div>ResumeAI • Minimalist ATS Resume Tailoring</div>
+    </div>
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    // User Profile Dropdown Toggle
+    function toggleUserDropdown() {
+      const menu = document.getElementById('userDropdownMenu');
+      if (menu) {
+        menu.classList.toggle('hidden');
+      }
+    }
+
+    // Close user dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const container = document.getElementById('userMenuDropdownContainer');
+      const menu = document.getElementById('userDropdownMenu');
+      if (container && menu && !container.contains(e.target)) {
+        menu.classList.add('hidden');
+      }
+    });
+
+    // Mobile Hamburger Menu Toggle
+    const mobileMenuButton = document.getElementById('mobileMenuButton');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const menuIconClosed = document.getElementById('menuIconClosed');
+    const menuIconOpen = document.getElementById('menuIconOpen');
+
+    if (mobileMenuButton && mobileMenu) {
+      mobileMenuButton.addEventListener('click', () => {
+        const isClosed = mobileMenu.classList.contains('hidden');
+        if (isClosed) {
+          mobileMenu.classList.remove('hidden');
+          if (menuIconClosed) menuIconClosed.classList.add('hidden');
+          if (menuIconOpen) menuIconOpen.classList.remove('hidden');
+        } else {
+          mobileMenu.classList.add('hidden');
+          if (menuIconClosed) menuIconClosed.classList.remove('hidden');
+          if (menuIconOpen) menuIconOpen.classList.add('hidden');
+        }
+      });
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Job Application Tracker - ResumeAI{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <!-- Page Header -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">Job Application Pipeline</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Track and manage every stage of your job hunt in one organized Kanban pipeline.</p>
+    </div>
+    <div class="flex items-center gap-2.5">
+      <button onclick="document.getElementById('newAppModal').classList.remove('hidden')" 
+        class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+        <i data-lucide="plus" class="w-4 h-4"></i> Add Application
+      </button>
+    </div>
+  </div>
+
+  <!-- Pipeline Stats Summary -->
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+    {% set stages = [
+      ('Saved', 'slate', columns['Saved']|length),
+      ('Applied', 'blue', columns['Applied']|length),
+      ('Interviewing', 'amber', columns['Interviewing']|length),
+      ('Offered', 'emerald', columns['Offered']|length),
+      ('Rejected', 'rose', columns['Rejected']|length)
+    ] %}
+    {% for name, color, count in stages %}
+      <div class="clean-card p-3 rounded-xl border border-slate-200">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">{{ name }}</div>
+        <div class="text-xl font-bold text-slate-900 mt-1">{{ count }}</div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Kanban Board Columns -->
+  <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
+    {% for status, items in columns.items() %}
+      {% set badge_color = 'bg-slate-100 text-slate-700' %}
+      {% if status == 'Applied' %}{% set badge_color = 'bg-blue-100 text-blue-800' %}
+      {% elif status == 'Interviewing' %}{% set badge_color = 'bg-amber-100 text-amber-800' %}
+      {% elif status == 'Offered' %}{% set badge_color = 'bg-emerald-100 text-emerald-800' %}
+      {% elif status == 'Rejected' %}{% set badge_color = 'bg-rose-100 text-rose-800' %}
+      {% endif %}
+
+      <div class="bg-slate-100/70 border border-slate-200 rounded-xl p-3 min-h-[450px] flex flex-col gap-3">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-700">{{ status }}</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ badge_color }}">{{ items|length }}</span>
+        </div>
+
+        <div class="flex flex-col gap-2.5 flex-grow">
+          {% for app in items %}
+            <div class="clean-card p-3.5 rounded-lg border border-slate-200 shadow-sm hover:border-slate-300 transition-all bg-white relative group">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <h4 class="text-sm font-bold text-slate-900 leading-tight">{{ app.job_title }}</h4>
+                  <div class="text-xs font-semibold text-slate-600 mt-0.5">{{ app.company }}</div>
+                </div>
+                <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                  <form action="{{ url_for('delete_application', app_id=app.id) }}" method="POST" onsubmit="return confirm('Delete this application entry?');">
+                    <button type="submit" class="text-slate-400 hover:text-rose-600 p-1" title="Delete">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              {% if app.location or app.salary_range %}
+                <div class="mt-2 flex flex-wrap gap-1.5 text-[11px] text-slate-500">
+                  {% if app.location %}
+                    <span class="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded">
+                      <i data-lucide="map-pin" class="w-3 h-3 text-slate-400"></i> {{ app.location }}
+                    </span>
+                  {% endif %}
+                  {% if app.salary_range %}
+                    <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      <i data-lucide="dollar-sign" class="w-3 h-3"></i> {{ app.salary_range }}
+                    </span>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              {% if app.resume_id %}
+                <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <a href="{{ url_for('view_resume', resume_id=app.resume_id) }}" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1">
+                    <i data-lucide="file-text" class="w-3 h-3"></i> Linked Resume
+                  </a>
+                  {% if app.match_score %}
+                    <span class="font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">{{ app.match_score }}% match</span>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              <!-- Status Dropdown Quick-Shift -->
+              <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-[10px] text-slate-400 font-medium">Stage:</span>
+                <select onchange="updateAppStatus({{ app.id }}, this.value)" class="text-xs bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 font-medium text-slate-700">
+                  {% for opt in ['Saved', 'Applied', 'Interviewing', 'Offered', 'Rejected'] %}
+                    <option value="{{ opt }}" {% if opt == app.status %}selected{% endif %}>{{ opt }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          {% else %}
+            <div class="text-center py-8 text-xs text-slate-400 border border-dashed border-slate-200 rounded-lg">
+              No applications in {{ status }}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Modal: New Application -->
+<div id="newAppModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="clean-card bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 relative">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+      <h3 class="text-lg font-bold text-slate-900">Add New Job Application</h3>
+      <button onclick="document.getElementById('newAppModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form action="{{ url_for('create_application') }}" method="POST" class="mt-4 space-y-3.5">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Company *</label>
+          <input type="text" name="company" required placeholder="e.g. Google, Stripe" class="clean-input w-full px-3 py-2 rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Job Title *</label>
+          <input type="text" name="job_title" required placeholder="e.g. Senior Backend Engineer" class="clean-input w-full px-3 py-2 rounded-lg text-sm">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Initial Status</label>
+          <select name="status" class="clean-input w-full px-3 py-2 rounded-lg text-sm">
+            <option value="Saved">Saved</option>
+            <option value="Applied" selected>Applied</option>
+            <option value="Interviewing">Interviewing</option>
+            <option value="Offered">Offered</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Link Tailored Resume</label>
+          <select name="resume_id" class="clean-input w-full px-3 py-2 rounded-lg text-sm">
+            <option value="">-- None / Select Resume --</option>
+            {% for r in user_resumes %}
+              <option value="{{ r.id }}">{{ r.title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Salary Range</label>
+          <input type="text" name="salary_range" placeholder="e.g. $160k - $190k" class="clean-input w-full px-3 py-2 rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Location / Remote</label>
+          <input type="text" name="location" placeholder="e.g. Remote (US) / SF" class="clean-input w-full px-3 py-2 rounded-lg text-sm">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Job Post URL</label>
+        <input type="url" name="job_url" placeholder="https://..." class="clean-input w-full px-3 py-2 rounded-lg text-sm">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Notes & Follow-ups</label>
+        <textarea name="notes" rows="2" placeholder="Recruiter contact, referral names, interview rounds..." class="clean-input w-full px-3 py-2 rounded-lg text-sm"></textarea>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="document.getElementById('newAppModal').classList.add('hidden')" class="px-4 py-2 border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-lg shadow-sm">
+          Save Application
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function updateAppStatus(appId, newStatus) {
+    try {
+      const response = await fetch(`/applications/${appId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await response.json();
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert('Error updating status: ' + data.error);
+      }
+    } catch (err) {
+      alert('Network error updating status');
+    }
+  }
+</script>
+{% endblock %}

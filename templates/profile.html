@@ -1,0 +1,775 @@
+{% extends "base.html" %}
+
+{% block title %}Master Profile - ResumeAI{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 clean-card p-6 rounded-2xl">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+        <i data-lucide="user-check" class="w-5 h-5 text-slate-700"></i>
+        Master Career Profile
+      </h1>
+      <p class="text-xs text-slate-500 mt-0.5">
+        Your primary source of truth. The AI draws experiences, tools, and achievements from here to tailor each resume.
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button type="button" onclick="document.getElementById('importModal').classList.remove('hidden')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center gap-1.5 shadow-sm">
+        <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Import PDF / DOCX
+      </button>
+    </div>
+  </div>
+
+  <form method="POST" action="{{ url_for('profile') }}" id="profileForm" class="space-y-6">
+    <!-- Contact & Basics -->
+    <div class="clean-card p-6 rounded-2xl space-y-4">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5 border-b border-slate-100 pb-3">
+        <i data-lucide="id-card" class="w-4 h-4 text-slate-500"></i> Basic & Contact Info
+      </h3>
+
+      <!-- Profile Photo Upload & Preview -->
+      <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-4">
+        <div class="relative group">
+          <img id="profilePhotoPreview" src="{{ profile.profile_photo_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80' }}"
+            class="w-20 h-20 rounded-full object-cover border-2 border-slate-300 shadow-sm bg-white" alt="Profile Photo"
+            onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'">
+          {% if not profile.profile_photo_url %}
+            <div id="noPhotoBadge" class="absolute -bottom-1 -right-1 bg-slate-200 text-slate-600 rounded-full p-1 text-[10px]" title="Default placeholder">
+              <i data-lucide="image" class="w-3.5 h-3.5"></i>
+            </div>
+          {% endif %}
+        </div>
+        <div class="flex-1 space-y-1 text-center sm:text-left">
+          <label class="block text-xs font-bold text-slate-800">Profile Photo</label>
+          <p class="text-[11px] text-slate-500">Add a professional headshot. You can toggle whether to show it on any resume.</p>
+          <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+            <button type="button" onclick="document.getElementById('photoFileInput').click()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 shadow-2xs flex items-center gap-1.5">
+              <i data-lucide="upload" class="w-3.5 h-3.5 text-slate-500"></i> Upload Image
+            </button>
+            <button type="button" onclick="removeProfilePhoto()" class="px-3 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 border border-rose-200 flex items-center gap-1">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Remove
+            </button>
+            <input type="file" id="photoFileInput" accept="image/*" class="hidden" onchange="handlePhotoUpload(this)">
+            <input type="hidden" name="profile_photo_url" id="profile_photo_url" value="{{ profile.profile_photo_url or '' }}">
+          </div>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Full Name</label>
+          <input type="text" name="full_name" value="{{ profile.full_name or '' }}" placeholder="Alex Mercer" required
+            class="clean-input w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Professional Title</label>
+          <input type="text" name="professional_title" value="{{ profile.professional_title or '' }}" placeholder="Senior Full Stack Engineer"
+            class="clean-input w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Email</label>
+          <input type="email" name="email" value="{{ profile.email or '' }}" placeholder="alex@example.com"
+            class="clean-input w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Phone</label>
+          <input type="text" name="phone" value="{{ profile.phone or '' }}" placeholder="+91 98765 43210"
+            class="clean-input w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Location</label>
+          <input type="text" name="location" value="{{ profile.location or '' }}" placeholder="San Francisco, CA (Remote)"
+            class="clean-input w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">LinkedIn URL</label>
+          <input type="url" name="linkedin_url" value="{{ profile.linkedin_url or '' }}" placeholder="https://linkedin.com/in/alex"
+            class="clean-input w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">GitHub URL</label>
+          <input type="url" name="github_url" value="{{ profile.github_url or '' }}" placeholder="https://github.com/alex"
+            class="clean-input w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Portfolio Website</label>
+          <input type="url" name="portfolio_url" value="{{ profile.portfolio_url or '' }}" placeholder="https://alexmercer.dev"
+            class="clean-input w-full rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600">Master Summary / Bio</label>
+          <button type="button" onclick="openRewriteModalForTarget(document.querySelector('textarea[name=\'summary\']'), 'summary')" class="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 transition-colors">
+            <i data-lucide="sparkles" class="w-3 h-3 text-amber-500"></i> AI Rewrite Bio
+          </button>
+        </div>
+        <textarea name="summary" rows="3" placeholder="Brief overview of your career background, core competencies, and career goals..."
+          class="clean-input w-full rounded-lg p-3 text-sm">{{ profile.summary or '' }}</textarea>
+      </div>
+    </div>
+
+    <!-- Skills List -->
+    <div class="clean-card p-6 rounded-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <i data-lucide="layers" class="w-4 h-4 text-slate-500"></i> Skills & Tools Inventory
+        </h3>
+        <span class="text-[11px] text-slate-400">Comma-separated</span>
+      </div>
+      <div>
+        <input type="text" id="skillsInput" placeholder="Python, MariaDB, Docker, FastAPI, PyTorch, Kubernetes, Linux, Git..."
+          value="{{ profile.skills|join(', ') if profile.skills else '' }}"
+          class="clean-input w-full rounded-lg px-3 py-2 text-sm">
+        <p class="text-[11px] text-slate-500 mt-1">Include programming languages, frameworks, cloud services, and domain competencies.</p>
+      </div>
+    </div>
+
+    <!-- Work Experience Repeater -->
+    <div class="clean-card p-6 rounded-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <i data-lucide="briefcase" class="w-4 h-4 text-slate-500"></i> Work Experience
+        </h3>
+        <button type="button" onclick="addExperience()" class="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200 flex items-center gap-1">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Position
+        </button>
+      </div>
+
+      <div id="experiencesContainer" class="space-y-3">
+      </div>
+    </div>
+
+    <!-- Education Repeater -->
+    <div class="clean-card p-6 rounded-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <i data-lucide="graduation-cap" class="w-4 h-4 text-slate-500"></i> Education
+        </h3>
+        <button type="button" onclick="addEducation()" class="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200 flex items-center gap-1">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Degree
+        </button>
+      </div>
+
+      <div id="educationsContainer" class="space-y-3">
+      </div>
+    </div>
+
+    <!-- Projects Repeater -->
+    <div class="clean-card p-6 rounded-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <i data-lucide="folder-git-2" class="w-4 h-4 text-slate-500"></i> Projects & Portfolios
+        </h3>
+        <button type="button" onclick="addProject()" class="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200 flex items-center gap-1">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Project
+        </button>
+      </div>
+
+      <div id="projectsContainer" class="space-y-3">
+      </div>
+    </div>
+
+    <!-- Certifications Repeater -->
+    <div class="clean-card p-6 rounded-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <i data-lucide="award" class="w-4 h-4 text-slate-500"></i> Certifications & Credentials
+        </h3>
+        <button type="button" onclick="addCertification()" class="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200 flex items-center gap-1">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Certification
+        </button>
+      </div>
+
+      <div id="certificationsContainer" class="space-y-3">
+      </div>
+    </div>
+
+    <!-- Hidden JSON form fields -->
+    <input type="hidden" name="skills_json" id="skills_json">
+    <input type="hidden" name="experiences_json" id="experiences_json">
+    <input type="hidden" name="educations_json" id="educations_json">
+    <input type="hidden" name="projects_json" id="projects_json">
+    <input type="hidden" name="certifications_json" id="certifications_json">
+    <input type="hidden" name="custom_sections_json" id="custom_sections_json" value="[]">
+
+    <!-- Save Button -->
+    <div class="sticky bottom-6 bg-white/95 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-lg flex items-center justify-between z-30">
+      <div class="text-xs text-slate-500">Unsaved changes will be lost if you leave.</div>
+      <button type="submit" onclick="prepareAndSubmit(event)"
+        class="px-6 py-2.5 rounded-lg font-medium text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all flex items-center gap-2">
+        <i data-lucide="save" class="w-4 h-4"></i> Save Profile
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Modal: Import Resume File -->
+<div id="importModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="clean-card bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 relative">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+      <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+        <i data-lucide="upload-cloud" class="w-5 h-5 text-blue-600"></i> Import Existing Resume
+      </h3>
+      <button onclick="document.getElementById('importModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="mt-4 space-y-4">
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Upload your existing resume in <strong>PDF, Word (.docx), or Text (.txt)</strong> format. Our AI will analyze and populate your Master Profile automatically.
+      </p>
+
+      <div class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-blue-500 transition-colors bg-slate-50/50 cursor-pointer"
+        onclick="document.getElementById('resumeFileInput').click()">
+        <input type="file" id="resumeFileInput" accept=".pdf,.docx,.doc,.txt" class="hidden" onchange="handleFileSelected(this)">
+        <i data-lucide="file-up" class="w-8 h-8 text-slate-400 mx-auto mb-2"></i>
+        <div id="fileSelectedLabel" class="text-xs font-semibold text-slate-700">Click or drag resume file here</div>
+        <div class="text-[11px] text-slate-400 mt-1">Supports PDF, DOCX, TXT (Max 10MB)</div>
+      </div>
+
+      <div id="importStatus" class="hidden text-xs p-3 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 flex items-center gap-2">
+        <div class="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <span>Parsing resume and populating profile with AI...</span>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="document.getElementById('importModal').classList.add('hidden')" class="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="button" id="startImportBtn" onclick="uploadAndParseResume()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm">
+          Extract & Import
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: AI Content Re-writer & Optimizer -->
+<div id="rewriteModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="clean-card bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 relative">
+    <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+      <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+        <i data-lucide="sparkles" class="w-5 h-5 text-amber-500"></i> <span id="rewriteModalTitle">AI Content Optimizer & Rewriter</span>
+      </h3>
+      <button onclick="document.getElementById('rewriteModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 p-1">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="mt-4 space-y-3.5">
+      <!-- Provider & Model Selection -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50/80 rounded-xl border border-slate-200">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">AI Provider</label>
+          <div class="flex items-center gap-2">
+            <label class="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white cursor-pointer text-xs font-semibold hover:border-slate-300 transition-colors">
+              <input type="radio" name="rewrite_provider" value="gemini" checked onchange="updateRewriteModelDropdown('gemini')">
+              <span>Google Gemini</span>
+            </label>
+            <label class="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white cursor-pointer text-xs font-semibold hover:border-slate-300 transition-colors">
+              <input type="radio" name="rewrite_provider" value="groq" onchange="updateRewriteModelDropdown('groq')">
+              <span>Groq Cloud</span>
+            </label>
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">Active Model</label>
+          <select id="rewriteModelSelect" class="clean-input w-full rounded-lg px-2.5 py-1.5 text-xs font-medium bg-white">
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1" id="rewriteSourceLabel">Current Text</label>
+        <textarea id="rewriteSourceText" rows="3" class="clean-input w-full rounded-lg p-2.5 text-xs leading-relaxed" placeholder="Enter or paste text to rewrite..."></textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Optimization Formula & Style</label>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+          <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer hover:border-slate-300 transition-colors">
+            <input type="radio" name="rewrite_mode" value="xyz" checked>
+            <span class="font-medium">Google X-Y-Z</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer hover:border-slate-300 transition-colors">
+            <input type="radio" name="rewrite_mode" value="quantify">
+            <span class="font-medium">Metrics & KPIs</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer hover:border-slate-300 transition-colors">
+            <input type="radio" name="rewrite_mode" value="action">
+            <span class="font-medium">Power Verbs</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer hover:border-slate-300 transition-colors">
+            <input type="radio" name="rewrite_mode" value="concise">
+            <span class="font-medium">Punchy & Crisp</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer hover:border-slate-300 transition-colors">
+            <input type="radio" name="rewrite_mode" value="leadership">
+            <span class="font-medium">Executive / Lead</span>
+          </label>
+          <label class="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 bg-slate-50 cursor-pointer hover:border-slate-300 transition-colors">
+            <input type="radio" name="rewrite_mode" value="custom">
+            <span class="font-medium">Custom Prompt</span>
+          </label>
+        </div>
+      </div>
+
+      <div id="customPromptContainer" class="hidden">
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Custom Polish Instruction</label>
+        <input type="text" id="customInstructionInput" placeholder="e.g. Focus on Kubernetes and high scalability..." class="clean-input w-full rounded-lg px-3 py-1.5 text-xs">
+      </div>
+
+      <div id="rewriteResultContainer" class="hidden space-y-1.5">
+        <label class="block text-xs font-semibold text-emerald-700">AI Optimized Result</label>
+        <div id="rewriteResultText" class="p-3 bg-emerald-50 border border-emerald-200 text-slate-800 rounded-lg text-xs leading-relaxed font-medium whitespace-pre-line"></div>
+      </div>
+
+      <div class="flex justify-between items-center pt-2">
+        <button type="button" id="runRewriteBtn" onclick="executeBulletRewrite()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5">
+          <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> Optimize with AI
+        </button>
+        <button type="button" id="applyRewriteBtn" onclick="applyRewrittenBullet()" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i> Insert into Profile
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let activeTextareaTarget = null;
+  let activeTargetKind = 'bullet'; // 'bullet', 'summary', 'project'
+
+  // Model catalog from backend
+  const modelsData = {{ available_models|tojson }};
+
+  function updateRewriteModelDropdown(provider) {
+    const select = document.getElementById('rewriteModelSelect');
+    if (!select) return;
+    select.innerHTML = '';
+    const models = modelsData[provider] || [];
+    models.forEach((m, idx) => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      if (idx === 0) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+
+  // Initialize dropdown with default provider
+  updateRewriteModelDropdown('gemini');
+
+  // Initial Data from DB
+  const initialExperiences = {{ profile.experiences|tojson if profile.experiences else '[]' }};
+  const initialEducations = {{ profile.educations|tojson if profile.educations else '[]' }};
+  const initialProjects = {{ profile.projects|tojson if profile.projects else '[]' }};
+  const initialCerts = {{ profile.certifications|tojson if profile.certifications else '[]' }};
+
+  // Watch rewrite_mode change
+  document.addEventListener('change', (e) => {
+    if (e.target.name === 'rewrite_mode') {
+      const customContainer = document.getElementById('customPromptContainer');
+      if (customContainer) {
+        if (e.target.value === 'custom') {
+          customContainer.classList.remove('hidden');
+        } else {
+          customContainer.classList.add('hidden');
+        }
+      }
+    }
+  });
+
+  function openRewriteModalForTarget(textarea, kind = 'summary') {
+    if (!textarea) return;
+    activeTextareaTarget = textarea;
+    activeTargetKind = kind;
+
+    const titleEl = document.getElementById('rewriteModalTitle');
+    const labelEl = document.getElementById('rewriteSourceLabel');
+
+    if (kind === 'summary') {
+      if (titleEl) titleEl.innerText = 'AI Career Summary / Bio Rewriter';
+      if (labelEl) labelEl.innerText = 'Current Career Bio / Summary';
+    } else if (kind === 'project') {
+      if (titleEl) titleEl.innerText = 'AI Project Description Optimizer';
+      if (labelEl) labelEl.innerText = 'Current Project Description';
+    } else {
+      if (titleEl) titleEl.innerText = 'AI Bullet Point Optimizer';
+      if (labelEl) labelEl.innerText = 'Current Bullet Point';
+    }
+
+    let text = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
+    if (!text.trim()) {
+      text = textarea.value.trim();
+    }
+    document.getElementById('rewriteSourceText').value = text;
+    document.getElementById('rewriteResultContainer').classList.add('hidden');
+    document.getElementById('applyRewriteBtn').classList.add('hidden');
+    document.getElementById('rewriteModal').classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function openRewriteModal(btn) {
+    const parentContainer = btn.closest('div');
+    const textarea = parentContainer ? parentContainer.querySelector('textarea.exp-highlights') : null;
+    if (!textarea) return;
+    openRewriteModalForTarget(textarea, 'bullet');
+  }
+
+  async function executeBulletRewrite() {
+    const text = document.getElementById('rewriteSourceText').value.trim();
+    if (!text) return alert('Please enter or paste text to rewrite.');
+    
+    const mode = document.querySelector('input[name="rewrite_mode"]:checked')?.value || 'xyz';
+    const customInst = document.getElementById('customInstructionInput')?.value || '';
+    const selectedProvider = document.querySelector('input[name="rewrite_provider"]:checked')?.value || 'gemini';
+    const selectedModel = document.getElementById('rewriteModelSelect')?.value || '';
+
+    const btn = document.getElementById('runRewriteBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<div class="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div><span>Polishing with AI...</span>`;
+
+    try {
+      const resp = await fetch('/api/rewrite-bullet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bullet_text: text,
+          mode: mode,
+          custom_instruction: customInst,
+          provider: selectedProvider,
+          model: selectedModel
+        })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        document.getElementById('rewriteResultText').innerText = data.rewritten;
+        document.getElementById('rewriteResultContainer').classList.remove('hidden');
+        document.getElementById('applyRewriteBtn').classList.remove('hidden');
+      } else {
+        alert('Optimization failed: ' + data.error);
+      }
+    } catch (e) {
+      alert('Network error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<i data-lucide="wand-2" class="w-3.5 h-3.5"></i> Optimize with AI`;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  function applyRewrittenBullet() {
+    const rewritten = document.getElementById('rewriteResultText').innerText.trim();
+    if (activeTextareaTarget && rewritten) {
+      if (activeTargetKind === 'summary' || activeTargetKind === 'project') {
+        activeTextareaTarget.value = rewritten;
+      } else {
+        if (activeTextareaTarget.value.trim()) {
+          activeTextareaTarget.value = activeTextareaTarget.value.trim() + '\n• ' + rewritten;
+        } else {
+          activeTextareaTarget.value = '• ' + rewritten;
+        }
+      }
+    }
+    document.getElementById('rewriteModal').classList.add('hidden');
+  }
+
+  function handleFileSelected(input) {
+    if (input.files && input.files[0]) {
+      document.getElementById('fileSelectedLabel').innerText = "Selected: " + input.files[0].name;
+    }
+  }
+
+  async function uploadAndParseResume() {
+    const fileInput = document.getElementById('resumeFileInput');
+    if (!fileInput.files || !fileInput.files[0]) {
+      return alert('Please select a resume file to upload.');
+    }
+
+    const formData = new FormData();
+    formData.append('resume_file', fileInput.files[0]);
+
+    document.getElementById('importStatus').classList.remove('hidden');
+    document.getElementById('startImportBtn').disabled = true;
+
+    try {
+      const resp = await fetch('/api/import-resume', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await resp.json();
+      if (data.success) {
+        alert('Resume imported successfully! Refreshing profile...');
+        window.location.reload();
+      } else {
+        alert('Import error: ' + data.error);
+      }
+    } catch (e) {
+      alert('Upload failed: Network error.');
+    } finally {
+      document.getElementById('importStatus').classList.add('hidden');
+      document.getElementById('startImportBtn').disabled = false;
+    }
+  }
+
+  function addExperience(data = {}) {
+    const container = document.getElementById('experiencesContainer');
+    const div = document.createElement('div');
+    div.className = "p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 relative group";
+    div.innerHTML = `
+      <button type="button" onclick="this.parentElement.remove()" class="absolute right-3 top-3 text-slate-400 hover:text-rose-600 p-1">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pr-8">
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Job Title / Role</label>
+          <input type="text" class="exp-title clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.title || ''}" placeholder="Senior Software Engineer">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Company Name</label>
+          <input type="text" class="exp-company clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.company || ''}" placeholder="Acme Corp">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Dates (Start - End)</label>
+          <div class="flex gap-2">
+            <input type="text" class="exp-start clean-input w-1/2 rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.start_date || ''}" placeholder="01/2022">
+            <input type="text" class="exp-end clean-input w-1/2 rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.end_date || ''}" placeholder="Present">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Location</label>
+          <input type="text" class="exp-location clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.location || ''}" placeholder="San Francisco, CA">
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-xs text-slate-600 font-medium">Key Accomplishments (One bullet per line)</label>
+          <button type="button" onclick="openRewriteModal(this)" class="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+            <i data-lucide="sparkles" class="w-3 h-3 text-amber-500"></i> AI Rewrite Helper
+          </button>
+        </div>
+        <textarea class="exp-highlights clean-input w-full rounded-lg p-2.5 text-sm bg-white" rows="3" placeholder="• Boosted backend API throughput by 40% using asynchronous worker queues...">${Array.isArray(data.highlights) ? data.highlights.join('\n') : (data.highlights || '')}</textarea>
+      </div>
+    `;
+    container.appendChild(div);
+    lucide.createIcons();
+  }
+
+  function addEducation(data = {}) {
+    const container = document.getElementById('educationsContainer');
+    const div = document.createElement('div');
+    div.className = "p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 relative";
+    div.innerHTML = `
+      <button type="button" onclick="this.parentElement.remove()" class="absolute right-3 top-3 text-slate-400 hover:text-rose-600 p-1">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pr-8">
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Degree & Major</label>
+          <input type="text" class="edu-degree clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.degree || ''}" placeholder="B.S. in Computer Science">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Institution</label>
+          <input type="text" class="edu-institution clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.institution || ''}" placeholder="UC Berkeley">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Graduation Year</label>
+          <input type="text" class="edu-date clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.graduation_date || ''}" placeholder="2020">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600 mb-1 font-medium">Academic Performance & Honors (Marks, CGPA, Percentage, GPA)</label>
+        <input type="text" class="edu-details clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.details || ''}" placeholder="e.g. CGPA: 3.9/4.0 • 88% Marks • Summa Cum Laude">
+      </div>
+    `;
+    container.appendChild(div);
+    lucide.createIcons();
+  }
+
+  function addProject(data = {}) {
+    const container = document.getElementById('projectsContainer');
+    const div = document.createElement('div');
+    div.className = "p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 relative";
+    div.innerHTML = `
+      <button type="button" onclick="this.parentElement.remove()" class="absolute right-3 top-3 text-slate-400 hover:text-rose-600 p-1">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pr-8">
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Project Name</label>
+          <input type="text" class="proj-name clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.name || ''}" placeholder="Cloud Orchestrator">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Tech Stack</label>
+          <input type="text" class="proj-tech clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${Array.isArray(data.technologies) ? data.technologies.join(', ') : (data.technologies || '')}" placeholder="Python, Docker, Redis">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Link / URL</label>
+          <input type="text" class="proj-link clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.link || ''}" placeholder="https://github.com/...">
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-xs text-slate-600 font-medium">Description</label>
+          <button type="button" onclick="openRewriteModalForTarget(this.closest('div').parentElement.querySelector('.proj-desc'), 'project')" class="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+            <i data-lucide="sparkles" class="w-3 h-3 text-amber-500"></i> AI Rewrite
+          </button>
+        </div>
+        <textarea class="proj-desc clean-input w-full rounded-lg p-2.5 text-sm bg-white" rows="2" placeholder="Designed and implemented...">${data.description || ''}</textarea>
+      </div>
+    `;
+    container.appendChild(div);
+    lucide.createIcons();
+  }
+
+  function addCertification(data = {}) {
+    const container = document.getElementById('certificationsContainer');
+    const div = document.createElement('div');
+    div.className = "p-4 rounded-xl border border-slate-200 bg-slate-50/50 relative";
+    div.innerHTML = `
+      <button type="button" onclick="this.parentElement.remove()" class="absolute right-3 top-3 text-slate-400 hover:text-rose-600 p-1">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pr-8">
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Certification Name</label>
+          <input type="text" class="cert-name clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.name || ''}" placeholder="AWS Solutions Architect">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Issuer</label>
+          <input type="text" class="cert-issuer clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.issuer || ''}" placeholder="Amazon Web Services">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1 font-medium">Year</label>
+          <input type="text" class="cert-date clean-input w-full rounded-lg px-3 py-1.5 text-sm bg-white" value="${data.date || ''}" placeholder="2023">
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+    lucide.createIcons();
+  }
+
+  if (initialExperiences.length > 0) {
+    initialExperiences.forEach(exp => addExperience(exp));
+  } else {
+    addExperience();
+  }
+
+  if (initialEducations.length > 0) {
+    initialEducations.forEach(edu => addEducation(edu));
+  } else {
+    addEducation();
+  }
+
+  if (initialProjects.length > 0) {
+    initialProjects.forEach(proj => addProject(proj));
+  }
+
+  if (initialCerts.length > 0) {
+    initialCerts.forEach(cert => addCertification(cert));
+  }
+
+  function prepareAndSubmit(e) {
+    const skillsRaw = document.getElementById('skillsInput').value;
+    const skillsArray = skillsRaw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    document.getElementById('skills_json').value = JSON.stringify(skillsArray);
+
+    const expDivs = document.querySelectorAll('#experiencesContainer > div');
+    const experiences = [];
+    expDivs.forEach(d => {
+      const title = d.querySelector('.exp-title')?.value.trim();
+      if (title) {
+        const highlightsText = d.querySelector('.exp-highlights')?.value || '';
+        const highlights = highlightsText.split('\n').map(h => h.replace(/^[-•*]\s*/, '').trim()).filter(h => h.length > 0);
+        experiences.push({
+          title: title,
+          company: d.querySelector('.exp-company')?.value.trim() || '',
+          start_date: d.querySelector('.exp-start')?.value.trim() || '',
+          end_date: d.querySelector('.exp-end')?.value.trim() || '',
+          location: d.querySelector('.exp-location')?.value.trim() || '',
+          highlights: highlights
+        });
+      }
+    });
+    document.getElementById('experiences_json').value = JSON.stringify(experiences);
+
+    const eduDivs = document.querySelectorAll('#educationsContainer > div');
+    const educations = [];
+    eduDivs.forEach(d => {
+      const degree = d.querySelector('.edu-degree')?.value.trim();
+      if (degree) {
+        educations.push({
+          degree: degree,
+          institution: d.querySelector('.edu-institution')?.value.trim() || '',
+          graduation_date: d.querySelector('.edu-date')?.value.trim() || '',
+          details: d.querySelector('.edu-details')?.value.trim() || ''
+        });
+      }
+    });
+    document.getElementById('educations_json').value = JSON.stringify(educations);
+
+    const projDivs = document.querySelectorAll('#projectsContainer > div');
+    const projects = [];
+    projDivs.forEach(d => {
+      const name = d.querySelector('.proj-name')?.value.trim();
+      if (name) {
+        const techRaw = d.querySelector('.proj-tech')?.value || '';
+        const techs = techRaw.split(',').map(t => t.trim()).filter(t => t.length > 0);
+        projects.push({
+          name: name,
+          technologies: techs,
+          link: d.querySelector('.proj-link')?.value.trim() || '',
+          description: d.querySelector('.proj-desc')?.value.trim() || ''
+        });
+      }
+    });
+    document.getElementById('projects_json').value = JSON.stringify(projects);
+
+    const certDivs = document.querySelectorAll('#certificationsContainer > div');
+    const certs = [];
+    certDivs.forEach(d => {
+      const name = d.querySelector('.cert-name')?.value.trim();
+      if (name) {
+        certs.push({
+          name: name,
+          issuer: d.querySelector('.cert-issuer')?.value.trim() || '',
+          date: d.querySelector('.cert-date')?.value.trim() || ''
+        });
+      }
+    });
+    document.getElementById('certifications_json').value = JSON.stringify(certs);
+  }
+
+  function handlePhotoUpload(input) {
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        return alert("Photo size should be under 5MB.");
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64 = e.target.result;
+        document.getElementById('profilePhotoPreview').src = base64;
+        document.getElementById('profile_photo_url').value = base64;
+        const badge = document.getElementById('noPhotoBadge');
+        if (badge) badge.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function removeProfilePhoto() {
+    document.getElementById('profilePhotoPreview').src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80';
+    document.getElementById('profile_photo_url').value = '';
+    const fileInput = document.getElementById('photoFileInput');
+    if (fileInput) fileInput.value = '';
+  }
+</script>
+{% endblock %}

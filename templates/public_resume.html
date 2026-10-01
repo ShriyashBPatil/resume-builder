@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-slate-50 text-slate-900">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ resume.personal_info.full_name }} - Resume</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background-color: #ffffff !important; }
+      .resume-container { box-shadow: none !important; border: none !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6">
+
+  <!-- Top Action Bar -->
+  <div class="no-print max-w-4xl mx-auto mb-6 flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+    <div class="flex items-center gap-2 text-sm font-semibold text-slate-800">
+      <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+      <span>Verified Online Candidate Portfolio</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="window.print()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors">
+        <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print / Save PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Resume Main Paper Container -->
+  <div class="resume-container max-w-4xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-md p-8 sm:p-12">
+    <!-- Header -->
+    <div class="border-b-2 border-slate-900 pb-5 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        {% if resume.personal_info.photo_url %}
+          <div class="shrink-0">
+            <img src="{{ resume.personal_info.photo_url }}" alt="{{ resume.personal_info.full_name }}" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-blue-600 shadow-sm">
+          </div>
+        {% endif %}
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ resume.personal_info.full_name }}</h1>
+          {% if resume.personal_info.professional_title %}
+            <div class="text-sm sm:text-base font-bold text-blue-600 mt-0.5 uppercase tracking-wide">{{ resume.personal_info.professional_title }}</div>
+          {% endif %}
+          
+          <div class="flex flex-wrap gap-y-1.5 gap-x-3.5 text-xs text-slate-600 mt-2">
+            {% if resume.personal_info.email %}
+              <a href="mailto:{{ resume.personal_info.email }}" class="hover:text-blue-600 flex items-center gap-1">
+                <i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400"></i> {{ resume.personal_info.email }}
+              </a>
+            {% endif %}
+            {% if resume.personal_info.phone %}
+              <span class="flex items-center gap-1">
+                <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400"></i> {{ resume.personal_info.phone }}
+              </span>
+            {% endif %}
+            {% if resume.personal_info.location %}
+              <span class="flex items-center gap-1">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i> {{ resume.personal_info.location }}
+              </span>
+            {% endif %}
+            {% if resume.personal_info.linkedin_url %}
+              <a href="{{ resume.personal_info.linkedin_url }}" target="_blank" class="text-blue-600 hover:underline flex items-center gap-1">
+                <i data-lucide="linkedin" class="w-3.5 h-3.5"></i> LinkedIn
+              </a>
+            {% endif %}
+            {% if resume.personal_info.github_url %}
+              <a href="{{ resume.personal_info.github_url }}" target="_blank" class="text-blue-600 hover:underline flex items-center gap-1">
+                <i data-lucide="github" class="w-3.5 h-3.5"></i> GitHub
+              </a>
+            {% endif %}
+            {% if resume.personal_info.portfolio_url %}
+              <a href="{{ resume.personal_info.portfolio_url }}" target="_blank" class="text-blue-600 hover:underline flex items-center gap-1">
+                <i data-lucide="globe" class="w-3.5 h-3.5"></i> Portfolio
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Executive Summary -->
+    {% if resume.summary %}
+      <div class="mb-6">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1.5 mb-3">Executive Summary</h2>
+        <p class="text-sm leading-relaxed text-slate-700 text-justify">{{ resume.summary }}</p>
+      </div>
+    {% endif %}
+
+    <!-- Core Competencies -->
+    {% if resume.core_competencies %}
+      <div class="mb-6">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1.5 mb-3">Core Competencies & Skills</h2>
+        <div class="flex flex-wrap gap-2">
+          {% if resume.core_competencies is string %}
+            <span class="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-800 text-xs font-medium rounded-md">{{ resume.core_competencies }}</span>
+          {% else %}
+            {% for skill in resume.core_competencies %}
+              <span class="px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-800 text-xs font-medium rounded-md">{{ skill }}</span>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Experience -->
+    {% if resume.experience %}
+      <div class="mb-6">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1.5 mb-4">Professional Experience</h2>
+        <div class="space-y-5">
+          {% for job in resume.experience %}
+            <div>
+              <div class="flex flex-col sm:flex-row sm:items-baseline justify-between">
+                <div>
+                  <span class="font-bold text-slate-900 text-base">{{ job.title }}</span>
+                  <span class="text-blue-600 font-semibold text-base"> • {{ job.company }}</span>
+                </div>
+                <div class="text-xs font-medium text-slate-500">
+                  {{ job.start_date }} – {{ job.end_date }} {% if job.location %}| {{ job.location }}{% endif %}
+                </div>
+              </div>
+              {% if job.highlights %}
+                <ul class="mt-2 space-y-1.5 text-sm text-slate-700 list-disc list-outside ml-5">
+                  {% for hl in job.highlights %}
+                    <li>{{ hl }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Education -->
+    {% if resume.education %}
+      <div class="mb-6">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1.5 mb-3">Education</h2>
+        <div class="space-y-3">
+          {% for edu in resume.education %}
+            <div>
+              <div class="flex flex-col sm:flex-row sm:items-baseline justify-between">
+                <div>
+                  <span class="font-bold text-slate-900 text-sm">{{ edu.degree }}</span>
+                  <span class="text-blue-600 font-semibold text-sm"> • {{ edu.institution }}</span>
+                </div>
+                <div class="text-xs text-slate-500">{{ edu.graduation_date }}</div>
+              </div>
+              {% if edu.details %}
+                <p class="text-xs text-slate-600 mt-0.5">{{ edu.details }}</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Projects -->
+    {% if resume.projects %}
+      <div class="mb-6">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1.5 mb-3">Key Projects</h2>
+        <div class="space-y-3">
+          {% for proj in resume.projects %}
+            <div>
+              <div class="flex items-baseline justify-between">
+                <span class="font-bold text-slate-900 text-sm">{{ proj.name }}</span>
+                {% if proj.link %}
+                  <a href="{{ proj.link }}" target="_blank" class="text-xs text-blue-600 hover:underline">View Project ↗</a>
+                {% endif %}
+              </div>
+              {% if proj.technologies %}
+                <div class="text-xs text-slate-500 mb-1">Stack: {{ proj.technologies|join(', ') }}</div>
+              {% endif %}
+              {% if proj.description %}
+                <p class="text-xs text-slate-700">{{ proj.description }}</p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Certifications -->
+    {% if resume.certifications %}
+      <div class="mb-6">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1.5 mb-3">Certifications</h2>
+        <div class="flex flex-wrap gap-2">
+          {% for cert in resume.certifications %}
+            <span class="text-xs font-medium bg-slate-50 border border-slate-200 text-slate-800 px-3 py-1 rounded-md inline-flex items-center gap-1.5">
+              <i data-lucide="award" class="w-3.5 h-3.5 text-slate-500"></i> {{ cert.name }} – {{ cert.issuer }} {% if cert.date %}({{ cert.date }}){% endif %}
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="no-print text-center text-xs text-slate-400 mt-8">
+    Powered by ResumeAI
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

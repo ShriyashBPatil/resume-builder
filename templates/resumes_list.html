@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Resumes - ResumeAI{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-5xl mx-auto">
+  <div class="clean-card p-6 sm:p-8 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+        <i data-lucide="folder" class="w-5 h-5 text-slate-700"></i>
+        Your Resumes Library
+      </h1>
+      <p class="text-xs text-slate-500 mt-0.5">
+        Manage, preview, edit, or download tailored resumes created for your job applications.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{{ url_for('build_manual') }}"
+        class="px-3.5 py-2 rounded-lg font-medium text-sm bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 transition-all flex items-center gap-1.5">
+        <i data-lucide="layout" class="w-4 h-4 text-slate-600"></i> Build (No AI)
+      </a>
+      <a href="{{ url_for('generate') }}"
+        class="px-4 py-2 rounded-lg font-medium text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all flex items-center gap-2">
+        <i data-lucide="sparkles" class="w-4 h-4"></i> Tailor with AI
+      </a>
+    </div>
+  </div>
+
+  {% if resumes %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for r in resumes %}
+        <div class="clean-card p-5 rounded-xl flex flex-col justify-between group hover:border-slate-400 transition-all">
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-2.5">
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                {{ r.provider_used|capitalize }} • {{ r.model_used }}
+              </span>
+              
+              {% if r.match_score >= 80 %}
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {{ r.match_score }}% Match
+                </span>
+              {% else %}
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                  {{ r.match_score }}% Match
+                </span>
+              {% endif %}
+            </div>
+
+            <h3 class="font-bold text-sm text-slate-900 group-hover:text-slate-600 transition-colors line-clamp-2">
+              {{ r.title }}
+            </h3>
+            
+            {% if r.target_company %}
+              <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                <i data-lucide="building-2" class="w-3.5 h-3.5"></i> {{ r.target_company }}
+              </div>
+            {% endif %}
+
+            <div class="text-[11px] text-slate-400 mt-2 flex items-center gap-1">
+              <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+              {{ r.created_at.strftime('%b %d, %Y') if r.created_at else '' }}
+            </div>
+          </div>
+
+          <!-- Bottom Action Buttons -->
+          <div class="border-t border-slate-100 pt-3.5 mt-5 flex items-center justify-between gap-2">
+            <a href="{{ url_for('view_resume', resume_id=r.id) }}" class="px-3 py-1 rounded text-xs font-medium bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 transition-all flex items-center gap-1">
+              <i data-lucide="eye" class="w-3.5 h-3.5"></i> View
+            </a>
+
+            <div class="flex items-center gap-1">
+              <a href="{{ url_for('download_pdf', resume_id=r.id) }}" class="p-1.5 text-slate-600 hover:text-slate-900 rounded" title="Download PDF">
+                <i data-lucide="file-down" class="w-4 h-4"></i>
+              </a>
+              <a href="{{ url_for('download_markdown', resume_id=r.id) }}" class="p-1.5 text-slate-600 hover:text-slate-900 rounded" title="Download Markdown">
+                <i data-lucide="code" class="w-4 h-4"></i>
+              </a>
+              <a href="{{ url_for('download_json', resume_id=r.id) }}" class="p-1.5 text-slate-600 hover:text-slate-900 rounded" title="Download JSON">
+                <i data-lucide="braces" class="w-4 h-4"></i>
+              </a>
+              <form action="{{ url_for('delete_resume', resume_id=r.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this resume?');">
+                <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 rounded transition-all" title="Delete">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="clean-card p-12 rounded-2xl text-center space-y-3">
+      <i data-lucide="file-plus" class="w-8 h-8 mx-auto text-slate-400"></i>
+      <h3 class="text-base font-bold text-slate-900">No resumes generated yet</h3>
+      <p class="text-xs text-slate-500 max-w-sm mx-auto">
+        Tailor your master profile to any job posting with Google Gemini or Groq LLMs.
+      </p>
+      <a href="{{ url_for('generate') }}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all">
+        <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> Generate Resume
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

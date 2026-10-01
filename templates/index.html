@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}ResumeAI - Minimalist AI Resume Tailoring{% endblock %}
+
+{% block content %}
+<div class="relative py-8 md:py-16 max-w-5xl mx-auto">
+  <!-- Subtle Monochrome Grid Texture Background -->
+  <div class="absolute inset-0 -z-10 opacity-[0.03] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+  <!-- Hero Header -->
+  <div class="text-center flex flex-col items-center max-w-3xl mx-auto px-4">
+    <!-- Minimalist Status Pill -->
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-medium text-slate-800 mb-8 transition-colors">
+      <span class="w-1.5 h-1.5 rounded-full bg-slate-950"></span>
+      <span>Google Gemini &amp; Groq LLMs</span>
+    </div>
+
+    <!-- Main Heading -->
+    <h1 class="text-4xl sm:text-6xl font-bold tracking-tight text-slate-950 leading-[1.12]">
+      Tailor your resume for any job description.
+    </h1>
+
+    <!-- Subtitle -->
+    <p class="mt-6 text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed font-normal">
+      Maintain your career experience in one master profile. Paste any job posting to analyze keyword alignment, reformat achievements with the Google X-Y-Z formula, and export clean, recruiter-ready PDFs.
+    </p>
+
+    <!-- CTAs -->
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="{{ url_for('register') }}" class="px-6 py-2.5 rounded-lg font-medium text-sm bg-slate-950 hover:bg-slate-800 text-white shadow-sm transition-all flex items-center gap-2 group">
+        <span>Get Started</span>
+        <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform text-slate-400"></i>
+      </a>
+      <a href="{{ url_for('login') }}" class="px-6 py-2.5 rounded-lg font-medium text-sm bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 transition-colors flex items-center gap-2">
+        <i data-lucide="log-in" class="w-4 h-4 text-slate-500"></i>
+        <span>Sign In</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Monochrome Interactive Preview Card -->
+  <div class="mt-14 max-w-4xl mx-auto px-4">
+    <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <!-- Window Titlebar -->
+      <div class="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs text-slate-600 font-mono">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+          <span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+          <span class="ml-2 text-slate-500">resume-tailor.preview</span>
+        </div>
+        <div class="flex items-center gap-1.5 font-medium px-2 py-0.5 rounded bg-slate-200/70 text-slate-800 text-[11px]">
+          <i data-lucide="check" class="w-3 h-3"></i> ATS Match Analysis
+        </div>
+      </div>
+
+      <!-- Preview Split -->
+      <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+        <!-- Job Description Input Mockup -->
+        <div class="p-5 bg-slate-50/50 flex flex-col justify-between">
+          <div>
+            <div class="text-[11px] font-mono uppercase tracking-wider text-slate-500 font-semibold mb-2">Job Description Keywords</div>
+            <p class="text-xs text-slate-600 font-mono leading-relaxed bg-white p-3 rounded border border-slate-200">
+              "...requires experience with Python, microservices architecture, PostgreSQL, API optimization, and CI/CD pipelines..."
+            </p>
+          </div>
+          <div class="mt-4 flex flex-wrap gap-1.5 pt-2 border-t border-slate-200">
+            <span class="text-[10px] font-mono px-2 py-0.5 bg-slate-200 text-slate-800 rounded">Python</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 bg-slate-200 text-slate-800 rounded">Microservices</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 bg-slate-200 text-slate-800 rounded">PostgreSQL</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 bg-slate-200 text-slate-800 rounded">CI/CD</span>
+          </div>
+        </div>
+
+        <!-- Tailored Resume Output Mockup -->
+        <div class="p-5 bg-white flex flex-col justify-between">
+          <div>
+            <div class="text-[11px] font-mono uppercase tracking-wider text-slate-900 font-semibold mb-2 flex items-center justify-between">
+              <span>Google X-Y-Z Formula Bullet</span>
+              <span class="text-[10px] font-normal text-slate-500">Quantified</span>
+            </div>
+            <div class="bg-slate-950 text-slate-100 p-3.5 rounded text-xs leading-relaxed font-sans">
+              "Architected Python microservices with PostgreSQL backend, reducing API latency by 40% while supporting 500k+ daily transactions."
+            </div>
+          </div>
+          <div class="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+            <span>Actionable Feedback</span>
+            <span class="text-slate-900 font-semibold">Structured JSON / PDF</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features Grid -->
+  <div class="mt-16 max-w-4xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-5">
+    <div class="clean-card p-5 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
+      <div class="w-8 h-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-900 mb-3.5">
+        <i data-lucide="user-check" class="w-4 h-4"></i>
+      </div>
+      <h3 class="text-sm font-semibold text-slate-900 mb-1">Master Profile</h3>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Save your career history, projects, and skills once. Update in one place and tailor across multiple applications.
+      </p>
+    </div>
+
+    <div class="clean-card p-5 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
+      <div class="w-8 h-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-900 mb-3.5">
+        <i data-lucide="target" class="w-4 h-4"></i>
+      </div>
+      <h3 class="text-sm font-semibold text-slate-900 mb-1">Targeted Tailoring</h3>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Align your experience with the job's requirements and review keyword match scores and ATS recommendations.
+      </p>
+    </div>
+
+    <div class="clean-card p-5 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
+      <div class="w-8 h-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-900 mb-3.5">
+        <i data-lucide="file-down" class="w-4 h-4"></i>
+      </div>
+      <h3 class="text-sm font-semibold text-slate-900 mb-1">PDF &amp; Markdown Exports</h3>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Choose between Classic, Modern, Minimal, and Compact PDF templates, or copy formatted Markdown.
+      </p>
+    </div>
+  </div>
+
+  <!-- How It Works Section -->
+  <div class="mt-16 pt-12 border-t border-slate-200 max-w-4xl mx-auto px-4">
+    <div class="text-xs font-mono uppercase tracking-wider text-slate-400 font-semibold mb-8 text-center">
+      Workflow Overview
+    </div>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-sm text-slate-700">
+      <div class="flex flex-col gap-2 p-4 rounded-lg bg-white border border-slate-200">
+        <div class="font-mono text-xs text-slate-400 font-semibold">01</div>
+        <div class="font-semibold text-slate-900">Add Your Experience</div>
+        <div class="text-xs text-slate-600 leading-relaxed">Fill out your master profile with past roles, projects, skills, and education.</div>
+      </div>
+      <div class="flex flex-col gap-2 p-4 rounded-lg bg-white border border-slate-200">
+        <div class="font-mono text-xs text-slate-400 font-semibold">02</div>
+        <div class="font-semibold text-slate-900">Provide Job Description</div>
+        <div class="text-xs text-slate-600 leading-relaxed">Paste the job posting and pick your preferred AI model (Gemini or Groq).</div>
+      </div>
+      <div class="flex flex-col gap-2 p-4 rounded-lg bg-white border border-slate-200">
+        <div class="font-mono text-xs text-slate-400 font-semibold">03</div>
+        <div class="font-semibold text-slate-900">Review &amp; Export</div>
+        <div class="text-xs text-slate-600 leading-relaxed">Inspect match analysis, edit content in the live preview, and download your PDF.</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

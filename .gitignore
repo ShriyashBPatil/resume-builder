@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Environment & local credentials
+.env
+cookies.txt
+app.log
+*.db
+*.sqlite3
+
+# Test artifacts & generated exports
+temp_*.pdf
+temp_*.docx
+
+# OS & IDE
+.DS_Store
+.idea/
+.vscode/

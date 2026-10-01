@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User: {{ user.username }} - Admin Console{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-5xl mx-auto">
+  <!-- Top Bar -->
+  <div class="clean-card bg-white p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-slate-200/90 shadow-2xs">
+    <div class="flex items-center gap-4">
+      {% if profile.profile_photo_url %}
+        <img src="{{ profile.profile_photo_url }}" alt="{{ user.username }}" class="w-14 h-14 rounded-2xl object-cover border border-slate-200 shadow-2xs shrink-0">
+      {% else %}
+        <div class="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-lg shrink-0 shadow-2xs">
+          {{ user.username[:1].upper() }}
+        </div>
+      {% endif %}
+
+      <div class="space-y-1">
+        <div class="flex items-center gap-2 mb-1">
+          <a href="{{ url_for('admin_dashboard') }}" class="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 font-semibold transition-colors">
+            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Back to Console
+          </a>
+          <span class="text-xs text-slate-300">•</span>
+          <span class="text-xs text-slate-400 font-medium">User ID #{{ user.id }}</span>
+          {% if user.is_admin %}
+            <span class="inline-flex items-center gap-1 text-[10px] font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded-full border border-slate-300">
+              <i data-lucide="shield" class="w-3 h-3 text-slate-700"></i> Admin
+            </span>
+          {% endif %}
+        </div>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">
+          Account & Profile Manager: {{ user.username }}
+        </h1>
+        <p class="text-xs text-slate-500">Edit credentials, permissions, master profile data, and generated documents.</p>
+      </div>
+    </div>
+
+    <!-- Quick Reset Email Action -->
+    <form method="POST" action="{{ url_for('admin_send_reset', user_id=user.id) }}" onsubmit="return confirm('Send automated password reset email to {{ user.email }}?')">
+      <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs shrink-0">
+        <i data-lucide="mail" class="w-3.5 h-3.5"></i> Send Reset Link
+      </button>
+    </form>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column: Credentials & Access Level Form -->
+    <div class="lg:col-span-1 space-y-6">
+      <form method="POST" action="{{ url_for('admin_user_edit', user_id=user.id) }}" class="clean-card bg-white p-6 rounded-2xl border border-slate-200/90 space-y-4 shadow-2xs">
+        <input type="hidden" name="action" value="update_credentials">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+          <i data-lucide="key" class="w-4 h-4 text-slate-600"></i> Account Credentials
+        </h2>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Username</label>
+          <input type="text" name="username" value="{{ user.username }}" required class="clean-input w-full p-2.5 rounded-xl text-xs font-semibold">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Email Address</label>
+          <input type="email" name="email" value="{{ user.email }}" required class="clean-input w-full p-2.5 rounded-xl text-xs font-semibold">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">New Password (Optional)</label>
+          <input type="password" name="new_password" placeholder="Leave blank to keep unchanged" class="clean-input w-full p-2.5 rounded-xl text-xs">
+          <p class="text-[10px] text-slate-400 mt-1">Directly sets new password hash</p>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Admin Access Privilege</label>
+          <select name="is_admin" class="clean-input w-full p-2.5 rounded-xl text-xs bg-white font-semibold">
+            <option value="0" {{ 'selected' if not user.is_admin else '' }}>Standard User</option>
+            <option value="1" {{ 'selected' if user.is_admin else '' }}>Platform Administrator</option>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors shadow-2xs flex items-center justify-center gap-1.5">
+          <i data-lucide="save" class="w-3.5 h-3.5"></i> Save Credentials
+        </button>
+      </form>
+
+      <!-- Danger Zone -->
+      {% if user.id != session.user_id and user.email != 'app@shriyashpatil.in' %}
+        <div class="clean-card bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-slate-600"></i> Danger Zone
+          </h3>
+          <p class="text-[11px] text-slate-500 leading-relaxed">
+            Deleting this user will permanently remove all associated master profiles, resumes, and tracked jobs.
+          </p>
+          <form method="POST" action="{{ url_for('admin_delete_user', user_id=user.id) }}" onsubmit="return confirm('Are you completely sure you want to permanently delete user {{ user.username }}?')">
+            <button type="submit" class="w-full py-2 bg-slate-200 hover:bg-rose-600 text-slate-700 hover:text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete User Account
+            </button>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Right Column: Master Profile Details & Generated Resumes -->
+    <div class="lg:col-span-2 space-y-6">
+      
+      <!-- Master Profile Form -->
+      <form method="POST" action="{{ url_for('admin_user_edit', user_id=user.id) }}" class="clean-card bg-white p-6 rounded-2xl border border-slate-200/90 space-y-4 shadow-2xs">
+        <input type="hidden" name="action" value="update_profile">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+            <i data-lucide="user-check" class="w-4 h-4 text-slate-600"></i> Master Profile Data
+          </h2>
+          <span class="text-xs text-slate-400">Synced to resume tailor</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Full Candidate Name</label>
+            <input type="text" name="full_name" value="{{ profile.full_name or '' }}" class="clean-input w-full p-2.5 rounded-xl text-xs font-medium">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Professional Title</label>
+            <input type="text" name="professional_title" value="{{ profile.professional_title or '' }}" class="clean-input w-full p-2.5 rounded-xl text-xs font-medium">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Phone Number</label>
+            <input type="text" name="phone" value="{{ profile.phone or '' }}" placeholder="+91 98765 43210" class="clean-input w-full p-2.5 rounded-xl text-xs font-medium">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Location</label>
+            <input type="text" name="location" value="{{ profile.location or '' }}" class="clean-input w-full p-2.5 rounded-xl text-xs font-medium">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">LinkedIn URL</label>
+            <input type="text" name="linkedin_url" value="{{ profile.linkedin_url or '' }}" class="clean-input w-full p-2.5 rounded-xl text-xs font-medium">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">GitHub / Portfolio URL</label>
+            <input type="text" name="github_url" value="{{ profile.github_url or '' }}" class="clean-input w-full p-2.5 rounded-xl text-xs font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Executive Summary</label>
+          <textarea name="summary" rows="3" class="clean-input w-full p-3 rounded-xl text-xs leading-relaxed">{{ profile.summary or '' }}</textarea>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Profile Photo URL (or Base64 data)</label>
+          <input type="text" name="profile_photo_url" value="{{ profile.profile_photo_url or '' }}" placeholder="https://... or data:image/..." class="clean-input w-full p-2.5 rounded-xl text-xs font-medium">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Skills & Core Competencies (Comma-separated)</label>
+          <input type="text" name="skills_str" value="{{ profile.skills|join(', ') if profile.skills else '' }}" class="clean-input w-full p-2.5 rounded-xl text-xs font-medium">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl transition-colors shadow-2xs flex items-center justify-center gap-1.5">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i> Update Master Profile Data
+        </button>
+      </form>
+
+      <!-- User's Resumes Section -->
+      <div class="clean-card bg-white p-6 rounded-2xl border border-slate-200/90 space-y-4 shadow-2xs">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+            <i data-lucide="folder" class="w-4 h-4 text-slate-600"></i> User's Generated Resumes ({{ resumes|length }})
+          </h2>
+        </div>
+
+        {% if resumes %}
+          <div class="space-y-2.5">
+            {% for r in resumes %}
+              <div class="p-3.5 bg-slate-50/70 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3 hover:border-slate-300 transition-colors">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-xs text-slate-900 truncate">{{ r.title }}</span>
+                    <span class="px-1.5 py-0.2 bg-slate-200 text-slate-800 rounded font-bold text-[10px]">{{ r.match_score }}% Match</span>
+                    {% if r.is_public %}
+                      <span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px]">Public</span>
+                    {% endif %}
+                  </div>
+                  <div class="text-[11px] text-slate-500 mt-0.5 truncate">
+                    Target: <strong>{{ r.target_role or 'General' }}</strong> {% if r.target_company %}@ {{ r.target_company }}{% endif %} • {{ r.template_name|capitalize }} template
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <a href="{{ url_for('view_resume', resume_id=r.id) }}" target="_blank" class="px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 transition-colors flex items-center gap-1 shadow-2xs">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-600"></i> View / PDF
+                  </a>
+                  <form method="POST" action="{{ url_for('admin_delete_resume', resume_id=r.id) }}" onsubmit="return confirm('Delete resume {{ r.title }}?')">
+                    <button type="submit" class="p-1.5 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg text-slate-500 hover:text-rose-600 transition-colors shadow-2xs" title="Delete Resume">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="p-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+            This user has not generated any tailored resumes yet.
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+

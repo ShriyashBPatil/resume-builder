@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Register - ResumeAI{% endblock %}
+
+{% block content %}
+<div class="max-w-sm mx-auto py-12">
+  <div class="clean-card p-8 rounded-2xl">
+    <div class="text-center mb-6">
+      <div class="inline-flex p-2.5 rounded-xl bg-slate-100 text-slate-800 mb-3">
+        <i data-lucide="user-plus" class="w-5 h-5"></i>
+      </div>
+      <h2 class="text-xl font-bold text-slate-900">Create your account</h2>
+      <p class="text-xs text-slate-500 mt-1">Start tailoring your resumes for target jobs</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('register') }}" class="space-y-4">
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Username</label>
+        <input type="text" name="username" required placeholder="johndoe"
+          class="clean-input w-full rounded-lg px-3.5 py-2 text-sm placeholder-slate-400">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Email Address</label>
+        <input type="email" name="email" required placeholder="john@example.com"
+          class="clean-input w-full rounded-lg px-3.5 py-2 text-sm placeholder-slate-400">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Password</label>
+        <input type="password" name="password" required placeholder="••••••••"
+          class="clean-input w-full rounded-lg px-3.5 py-2 text-sm placeholder-slate-400">
+      </div>
+
+      <button type="submit"
+        class="w-full mt-2 py-2.5 px-4 rounded-lg font-medium text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all flex items-center justify-center gap-2">
+        <span>Create Account</span>
+      </button>
+    </form>
+
+    <div class="mt-6 text-center text-xs text-slate-500">
+      Already have an account? 
+      <a href="{{ url_for('login') }}" class="text-slate-900 hover:underline font-semibold ml-1">Sign In</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

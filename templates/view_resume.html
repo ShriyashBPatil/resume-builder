@@ -1,0 +1,658 @@
+{% extends "base.html" %}
+
+{% block title %}{{ resume.title }} - ResumeAI{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-6xl mx-auto">
+  <!-- Top Bar -->
+  <div class="clean-card p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <a href="{{ url_for('resumes_list') }}" class="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> All Resumes
+        </a>
+        <span class="text-xs text-slate-300">•</span>
+        <span class="text-xs text-slate-500">{{ resume.provider_used|capitalize }} ({{ resume.model_used }})</span>
+        {% if resume.is_public %}
+          <span class="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Public Live
+          </span>
+        {% endif %}
+      </div>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-900">
+        {{ resume.title }}
+      </h1>
+      {% if resume.target_company %}
+        <p class="text-xs text-slate-500 font-medium mt-0.5">Target Company: {{ resume.target_company }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Clean Export & Edit Actions -->
+    <div class="flex items-center gap-2">
+      <div class="relative" id="exportDropdownContainer">
+        <button type="button" onclick="document.getElementById('exportDropdownMenu').classList.toggle('hidden')"
+          class="px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all flex items-center gap-2">
+          <i data-lucide="download" class="w-4 h-4"></i> Export Resume
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+        </button>
+
+        <div id="exportDropdownMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1.5 z-50 text-xs">
+          <a href="{{ url_for('download_pdf', resume_id=resume.id, template=selected_template, accent_color=accent_color, font=selected_font, single_page=1 if single_page else 0, qr=1 if include_qr else 0, photo=1 if include_photo else 0) }}"
+            class="flex items-center gap-2 px-3.5 py-2 text-slate-800 hover:bg-slate-50 font-medium">
+            <i data-lucide="file-down" class="w-4 h-4 text-rose-500"></i> PDF Document (.pdf)
+          </a>
+          <a href="{{ url_for('download_docx', resume_id=resume.id, accent_color=accent_color, font=selected_font) }}"
+            class="flex items-center gap-2 px-3.5 py-2 text-slate-800 hover:bg-slate-50 font-medium">
+            <i data-lucide="file-text" class="w-4 h-4 text-blue-500"></i> Word Document (.docx)
+          </a>
+          <a href="{{ url_for('download_markdown', resume_id=resume.id) }}"
+            class="flex items-center gap-2 px-3.5 py-2 text-slate-800 hover:bg-slate-50 font-medium">
+            <i data-lucide="code" class="w-4 h-4 text-slate-500"></i> Markdown (.md)
+          </a>
+          <a href="{{ url_for('download_json', resume_id=resume.id) }}"
+            class="flex items-center gap-2 px-3.5 py-2 text-slate-800 hover:bg-slate-50 font-medium">
+            <i data-lucide="braces" class="w-4 h-4 text-amber-500"></i> JSON Data (.json)
+          </a>
+        </div>
+      </div>
+
+      <a href="{{ url_for('edit_resume', resume_id=resume.id) }}"
+        class="px-3.5 py-2 rounded-lg font-semibold text-xs sm:text-sm bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition-all flex items-center gap-1.5">
+        <i data-lucide="edit-3" class="w-4 h-4 text-slate-500"></i> Edit
+      </a>
+    </div>
+  </div>
+
+  <!-- Workspace Tabs -->
+  <div class="flex border-b border-slate-200 gap-2 overflow-x-auto pb-px">
+    <button onclick="switchTab('resumeTab')" id="tab-resumeTab" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 border-slate-900 text-slate-900 flex items-center gap-2">
+      <i data-lucide="file" class="w-4 h-4"></i> Resume Preview & Style
+    </button>
+    <button onclick="switchTab('coverLetterTab')" id="tab-coverLetterTab" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-900 flex items-center gap-2">
+      <i data-lucide="mail" class="w-4 h-4"></i> AI Cover Letter
+    </button>
+    <button onclick="switchTab('interviewTab')" id="tab-interviewTab" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-900 flex items-center gap-2">
+      <i data-lucide="help-circle" class="w-4 h-4"></i> Interview Prep Kit (STAR)
+    </button>
+    <button onclick="switchTab('atsTab')" id="tab-atsTab" class="tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-900 flex items-center gap-2">
+      <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Deep ATS & Skill Gap
+    </button>
+  </div>
+
+  <!-- ==================== TAB 1: RESUME & CUSTOMIZER ==================== -->
+  <div id="resumeTab" class="tab-content">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <!-- Style Controls & Share Sidebar -->
+      <div class="space-y-5 lg:col-span-1">
+        <!-- Template Picker -->
+        <div class="clean-card p-4 rounded-xl space-y-3">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Resume Template</label>
+          <div class="space-y-1.5">
+            {% for key, tmpl in templates.items() %}
+              <a href="{{ url_for('view_resume', resume_id=resume.id, template=key, accent_color=accent_color, font=selected_font, single_page=1 if single_page else 0) }}"
+                class="block p-2.5 rounded-lg text-xs font-medium border transition-all {% if selected_template == key %}border-slate-900 bg-slate-900 text-white shadow-sm{% else %}border-slate-200 bg-white text-slate-700 hover:bg-slate-50{% endif %}">
+                {{ tmpl.name }}
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Typography & Font Selector -->
+        <div class="clean-card p-4 rounded-xl space-y-3">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center justify-between">
+            <span>Font Family</span>
+            <span class="text-[10px] text-slate-400 font-normal">Google Fonts</span>
+          </label>
+          <div class="grid grid-cols-2 gap-1.5">
+            {% for fkey, finfo in fonts.items() %}
+              <a href="{{ url_for('view_resume', resume_id=resume.id, template=selected_template, accent_color=accent_color, font=fkey, single_page=1 if single_page else 0) }}"
+                class="p-2 rounded-lg text-[11px] font-semibold border text-center transition-all {% if selected_font == fkey %}border-slate-900 bg-slate-900 text-white shadow-xs{% else %}border-slate-200 bg-white text-slate-700 hover:bg-slate-50{% endif %}">
+                {{ finfo.name.split('(')[0].strip() }}
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Custom Accent Color -->
+        <div class="clean-card p-4 rounded-xl space-y-3">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Theme Accent Color</label>
+          <div class="flex items-center gap-2">
+            {% set colors = ['#2563eb', '#0f172a', '#059669', '#7c3aed', '#dc2626', '#0891b2'] %}
+            {% for col in colors %}
+              <a href="{{ url_for('view_resume', resume_id=resume.id, template=selected_template, accent_color=col, font=selected_font, single_page=1 if single_page else 0) }}"
+                class="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 {% if accent_color == col %}border-slate-900 ring-2 ring-slate-400{% else %}border-transparent{% endif %}"
+                style="background-color: {{ col }};"></a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Display Options & Toggles (Single Page, QR, Photo) -->
+        <div class="clean-card p-4 rounded-xl space-y-3.5 text-xs">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Display Options</label>
+          
+          <!-- 1-Page Fit Toggle -->
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div>
+              <div class="font-semibold text-slate-800">1-Page Fit Mode</div>
+              <div class="text-[10px] text-slate-400">Auto-condenses margins</div>
+            </div>
+            <a href="{{ url_for('view_resume', resume_id=resume.id, template=selected_template, accent_color=accent_color, font=selected_font, single_page=0 if single_page else 1, qr=1 if include_qr else 0, photo=1 if include_photo else 0) }}"
+              class="px-2.5 py-1 rounded font-bold transition-all {% if single_page %}bg-emerald-100 text-emerald-800 border border-emerald-300{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+              {{ 'ON' if single_page else 'OFF' }}
+            </a>
+          </div>
+
+          <!-- QR Code Toggle -->
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div>
+              <div class="font-semibold text-slate-800 flex items-center gap-1">
+                <i data-lucide="qr-code" class="w-3.5 h-3.5 text-slate-500"></i> QR Code
+              </div>
+              <div class="text-[10px] text-slate-400">Portfolio / Share QR</div>
+            </div>
+            <a href="{{ url_for('view_resume', resume_id=resume.id, template=selected_template, accent_color=accent_color, font=selected_font, single_page=1 if single_page else 0, qr=0 if include_qr else 1, photo=1 if include_photo else 0) }}"
+              class="px-2.5 py-1 rounded font-bold transition-all {% if include_qr %}bg-emerald-100 text-emerald-800 border border-emerald-300{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+              {{ 'ON' if include_qr else 'OFF' }}
+            </a>
+          </div>
+
+          <!-- Profile Photo Toggle -->
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-semibold text-slate-800 flex items-center gap-1">
+                <i data-lucide="image" class="w-3.5 h-3.5 text-slate-500"></i> Profile Photo
+              </div>
+              <div class="text-[10px] text-slate-400">Candidate Portrait</div>
+            </div>
+            <a href="{{ url_for('view_resume', resume_id=resume.id, template=selected_template, accent_color=accent_color, font=selected_font, single_page=1 if single_page else 0, qr=1 if include_qr else 0, photo=0 if include_photo else 1) }}"
+              class="px-2.5 py-1 rounded font-bold transition-all {% if include_photo %}bg-emerald-100 text-emerald-800 border border-emerald-300{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+              {{ 'ON' if include_photo else 'OFF' }}
+            </a>
+          </div>
+        </div>
+
+        <!-- Public Shareable Link -->
+        <div class="clean-card p-4 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">Public Web Resume</label>
+            <button onclick="togglePublicShare()" id="shareToggleBtn" class="text-xs px-2.5 py-1 rounded font-bold transition-colors {% if resume.is_public %}bg-emerald-100 text-emerald-800 border border-emerald-300{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+              {{ 'Enabled' if resume.is_public else 'Disabled' }}
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-500">Generate a live, responsive web portfolio URL for recruiters.</p>
+          <div id="shareUrlContainer" class="{% if not resume.is_public %}hidden{% endif %} space-y-2">
+            <input type="text" id="shareUrlInput" readonly value="{% if resume.share_token %}{{ url_for('public_resume_view', share_token=resume.share_token, _external=True) }}{% endif %}" class="clean-input w-full p-2 text-[11px] rounded bg-slate-50 font-mono">
+            <button onclick="copyShareUrl()" class="w-full py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded flex items-center justify-center gap-1">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Public Link
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Resume Document Preview -->
+      <div class="lg:col-span-3">
+        <div class="clean-card p-4 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b border-slate-100 text-xs text-slate-500">
+            <div class="flex items-center gap-1.5 font-semibold text-slate-700">
+              <i data-lucide="eye" class="w-3.5 h-3.5 text-blue-600"></i>
+              <span>Live Styled Preview: <span class="text-blue-600 font-bold">{{ templates[selected_template].name.split('(')[0].strip() }}</span></span>
+            </div>
+
+            <!-- Quick Template Preview Switcher Pills -->
+            <div class="flex flex-wrap items-center gap-1.5">
+              <div class="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                {% for key, tmpl in templates.items() %}
+                  <a href="{{ url_for('view_resume', resume_id=resume.id, template=key, accent_color=accent_color, font=selected_font, single_page=1 if single_page else 0, qr=1 if include_qr else 0, photo=1 if include_photo else 0) }}"
+                    class="px-2 py-1 rounded-md text-[11px] font-bold transition-all {% if selected_template == key %}bg-slate-900 text-white shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-white{% endif %}">
+                    {{ tmpl.name.split('(')[0].strip() }}
+                  </a>
+                {% endfor %}
+              </div>
+              <span class="text-[11px] bg-slate-100 text-slate-600 px-2 py-1 rounded font-medium">
+                {{ fonts[selected_font].name.split('(')[0].strip() }} • <span class="inline-block w-2.5 h-2.5 rounded-full align-middle ml-0.5" style="background-color: {{ accent_color }};"></span>
+              </span>
+            </div>
+          </div>
+          
+          <div class="bg-slate-100/70 p-4 sm:p-8 rounded-xl flex justify-center overflow-x-auto">
+            <div class="w-full max-w-[800px] bg-white shadow-md border border-slate-200/90 rounded-sm p-6 sm:p-10 min-h-[600px]">
+              {{ rendered_styled_html|safe }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 2: AI COVER LETTER ==================== -->
+  <div id="coverLetterTab" class="tab-content hidden space-y-6">
+    <div class="clean-card p-6 rounded-2xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="mail-check" class="w-5 h-5 text-blue-600"></i> AI Tailored Cover Letter
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">Bespoke cover letter engineered around {{ resume.target_company or 'target company' }} and this specific resume.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="coverToneSelect" class="clean-input px-3 py-1.5 rounded-lg text-xs font-medium">
+            <option value="Professional & Persuasive" selected>Professional & Persuasive</option>
+            <option value="Modern & Engaging">Modern & Engaging</option>
+            <option value="Executive & Strategic">Executive & Strategic</option>
+            <option value="Concise & Direct">Concise & Direct</option>
+          </select>
+          <button onclick="generateCoverLetter()" id="genCoverBtn" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> {% if cover_letter %}Regenerate{% else %}Generate Cover Letter{% endif %}
+          </button>
+        </div>
+      </div>
+
+      <div id="coverLetterLoading" class="hidden py-12 text-center space-y-2">
+        <div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p class="text-xs text-slate-600 font-medium">Drafting bespoke executive cover letter...</p>
+      </div>
+
+      <div id="coverLetterContentContainer" class="{% if not cover_letter %}hidden{% endif %} space-y-4">
+        <div class="flex items-center justify-end gap-2">
+          <a href="{{ url_for('download_cover_letter_pdf', resume_id=resume.id) }}" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1">
+            <i data-lucide="file-down" class="w-3.5 h-3.5"></i> Download PDF
+          </a>
+          <a href="{{ url_for('download_cover_letter_docx', resume_id=resume.id) }}" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Download Word (.docx)
+          </a>
+        </div>
+
+        <textarea id="coverLetterEditor" rows="16" class="clean-input w-full p-6 rounded-xl font-sans text-sm text-slate-800 leading-relaxed bg-white border border-slate-300">{{ cover_letter.content if cover_letter else '' }}</textarea>
+      </div>
+
+      {% if not cover_letter %}
+        <div id="coverLetterPlaceholder" class="text-center py-12 border-2 border-dashed border-slate-200 rounded-xl">
+          <i data-lucide="file-text" class="w-10 h-10 text-slate-300 mx-auto mb-2"></i>
+          <h4 class="text-sm font-semibold text-slate-700">No cover letter generated yet</h4>
+          <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Click "Generate Cover Letter" above to create a high-converting cover letter based on this tailored resume.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ==================== TAB 3: AI INTERVIEW PREP ==================== -->
+  <div id="interviewTab" class="tab-content hidden space-y-6">
+    <div class="clean-card p-6 rounded-2xl space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="award" class="w-5 h-5 text-amber-500"></i> Interview Preparation Kit
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">Role-specific technical probes, STAR behavioral scenarios, and strategic questions to ask.</p>
+        </div>
+        <button onclick="generateInterviewPrep()" id="genPrepBtn" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> {% if interview_prep %}Regenerate Kit{% else %}Generate Interview Prep Kit{% endif %}
+        </button>
+      </div>
+
+      <div id="interviewLoading" class="hidden py-12 text-center space-y-2">
+        <div class="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <p class="text-xs text-slate-600 font-medium">Synthesizing interview questions & STAR talking points...</p>
+      </div>
+
+      <div id="interviewContent" class="{% if not interview_prep %}hidden{% endif %} space-y-6">
+        {% if interview_prep and interview_prep.qa_data %}
+          {% set qa = interview_prep.qa_data %}
+
+          <!-- Pitch Card -->
+          {% if qa.summary_pitch %}
+            <div class="bg-amber-50/70 border border-amber-200 p-5 rounded-xl space-y-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                <i data-lucide="mic" class="w-4 h-4 text-amber-700"></i> 60-Second "Tell Me About Yourself" Pitch
+              </h3>
+              <p class="text-xs sm:text-sm text-amber-950 leading-relaxed italic">"{{ qa.summary_pitch }}"</p>
+            </div>
+          {% endif %}
+
+          <!-- Top Talking Points -->
+          {% if qa.top_talking_points %}
+            <div class="clean-card p-4 rounded-xl space-y-2 border border-slate-200">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i> Key Talking Points
+              </h3>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {% for pt in qa.top_talking_points %}
+                  <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
+                    {{ pt }}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Technical & Architectural Questions -->
+          {% if qa.technical_questions %}
+            <div class="space-y-3">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <i data-lucide="cpu" class="w-4 h-4 text-blue-600"></i> Technical & Architectural Questions
+              </h3>
+              <div class="space-y-3">
+                {% for tq in qa.technical_questions %}
+                  <div class="clean-card p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div class="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                      <i data-lucide="help-circle" class="w-4 h-4 text-slate-400 flex-shrink-0"></i>
+                      <span>{{ tq.question }}</span>
+                    </div>
+                    {% if tq.why_asked %}
+                      <div class="text-[11px] text-slate-500 font-medium"><strong>Interviewer Intent:</strong> {{ tq.why_asked }}</div>
+                    {% endif %}
+                    {% if tq.key_points_to_cover %}
+                      <div class="flex flex-wrap gap-1.5 mt-1">
+                        {% for kp in tq.key_points_to_cover %}
+                          <span class="px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded text-[11px] font-medium">{{ kp }}</span>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    {% if tq.sample_star_answer %}
+                      <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 mt-2 leading-relaxed">
+                        <strong class="text-slate-900 block mb-1">Recommended Response Strategy:</strong>
+                        {{ tq.sample_star_answer }}
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Behavioral STAR Questions -->
+          {% if qa.behavioral_questions %}
+            <div class="space-y-3">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <i data-lucide="users" class="w-4 h-4 text-indigo-600"></i> Behavioral Questions (STAR Method)
+              </h3>
+              <div class="space-y-3">
+                {% for bq in qa.behavioral_questions %}
+                  <div class="clean-card p-4 rounded-xl border border-slate-200 space-y-3">
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                        <i data-lucide="help-circle" class="w-4 h-4 text-slate-400 flex-shrink-0"></i>
+                        <span>{{ bq.question }}</span>
+                      </div>
+                      {% if bq.competency %}
+                        <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded text-[11px] font-semibold flex-shrink-0">{{ bq.competency }}</span>
+                      {% endif %}
+                    </div>
+                    {% if bq.star_framework %}
+                      <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+                        <div class="p-2.5 bg-slate-50 border border-slate-200 rounded">
+                          <strong class="text-slate-800 block text-[11px]">S - Situation</strong>
+                          <span class="text-slate-600">{{ bq.star_framework.situation }}</span>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 border border-slate-200 rounded">
+                          <strong class="text-slate-800 block text-[11px]">T - Task</strong>
+                          <span class="text-slate-600">{{ bq.star_framework.task }}</span>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 border border-slate-200 rounded">
+                          <strong class="text-slate-800 block text-[11px]">A - Action</strong>
+                          <span class="text-slate-600">{{ bq.star_framework.action }}</span>
+                        </div>
+                        <div class="p-2.5 bg-emerald-50 border border-emerald-200 rounded">
+                          <strong class="text-emerald-800 block text-[11px]">R - Result</strong>
+                          <span class="text-emerald-900">{{ bq.star_framework.result }}</span>
+                        </div>
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Smart Questions to Ask Interviewer -->
+          {% if qa.smart_questions_to_ask_interviewer %}
+            <div class="clean-card p-5 rounded-xl border border-slate-200 space-y-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                <i data-lucide="help-circle" class="w-4 h-4 text-emerald-600"></i> Smart Questions to Ask the Hiring Team
+              </h3>
+              <ul class="space-y-1.5 text-xs text-slate-700">
+                {% for sq in qa.smart_questions_to_ask_interviewer %}
+                  <li class="flex items-start gap-2 p-2 bg-slate-50 rounded border border-slate-200">
+                    <i data-lucide="message-square" class="w-3.5 h-3.5 text-blue-600 flex-shrink-0 mt-0.5"></i>
+                    <span>{{ sq }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB 4: DEEP ATS & SKILL GAP ==================== -->
+  <div id="atsTab" class="tab-content hidden space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Score 1: Match Score -->
+      <div class="clean-card p-5 rounded-xl text-center">
+        <div class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">ATS JD Match Alignment</div>
+        <div class="text-3xl font-black text-slate-900 my-2">{{ resume.match_score }}%</div>
+        <p class="text-xs text-slate-500">Keyword correlation to target job posting</p>
+      </div>
+
+      <!-- Score 2: Readability Score -->
+      <div class="clean-card p-5 rounded-xl text-center">
+        <div class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Bullet Readability Index</div>
+        <div class="text-3xl font-black text-emerald-600 my-2">{{ deep_analysis.readability_score }}/100</div>
+        <p class="text-xs text-slate-500">Avg {{ deep_analysis.avg_bullet_word_count }} words per bullet</p>
+      </div>
+
+      <!-- Score 3: Total Skills Matched -->
+      <div class="clean-card p-5 rounded-xl text-center">
+        <div class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Core Tech Skills</div>
+        <div class="text-3xl font-black text-blue-600 my-2">{{ deep_analysis.total_skills_count }}</div>
+        <p class="text-xs text-slate-500">Included across profile & experiences</p>
+      </div>
+    </div>
+
+    <!-- Warnings / Clichés & Passive Voice -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="clean-card p-5 rounded-xl space-y-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i> Corporate Clichés & Weak Buzzwords
+        </h3>
+        {% if deep_analysis.cliches_detected %}
+          <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 space-y-1.5">
+            <p>We detected the following generic phrases that ATS scorers often de-prioritize:</p>
+            <div class="flex flex-wrap gap-1">
+              {% for c in deep_analysis.cliches_detected %}
+                <span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-semibold text-[11px]">{{ c }}</span>
+              {% endfor %}
+            </div>
+            <p class="text-[11px] text-amber-700 mt-1">Tip: Use the AI Bullet Rewriter to replace them with quantified action verbs.</p>
+          </div>
+        {% else %}
+          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-center gap-2">
+            <i data-lucide="check" class="w-4 h-4"></i> No generic corporate clichés detected! Excellent sharpness.
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="clean-card p-5 rounded-xl space-y-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-blue-500"></i> Passive Voice Analyzer
+        </h3>
+        {% if deep_analysis.passive_voice_count > 0 %}
+          <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 space-y-1.5">
+            <p>Found {{ deep_analysis.passive_voice_count }} potential passive voice sentences. Example:</p>
+            {% for ex in deep_analysis.passive_voice_examples %}
+              <div class="p-1.5 bg-white border border-blue-100 rounded text-[11px] italic">"{{ ex }}"</div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-center gap-2">
+            <i data-lucide="check" class="w-4 h-4"></i> Strong active voice throughout all achievements.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive AI Career Coach Assistant Widget -->
+  <div class="clean-card p-6 rounded-2xl space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+        <i data-lucide="message-square" class="w-4 h-4 text-slate-700"></i> AI Career Coach & Resume Refiner
+      </h3>
+      <span class="text-xs text-slate-400">Ask questions or request bullet tweaks</span>
+    </div>
+
+    <div id="chatMessages" class="space-y-3 max-h-80 overflow-y-auto p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+      <div class="p-3 bg-white border border-slate-200 rounded-lg text-slate-700 leading-relaxed shadow-2xs">
+        Welcome to your AI Career Coach. I can help you tweak bullet points, suggest additional achievements, or provide interview tips for this specific role. What would you like to refine?
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <input type="text" id="chatInput" placeholder="e.g. 'Can you improve my top highlight for TechNova?'" class="clean-input flex-1 px-3 py-2 rounded-lg text-xs" onkeypress="if(event.key==='Enter') sendChatMessage()">
+      <button onclick="sendChatMessage()" id="chatSendBtn" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1">
+        <i data-lucide="send" class="w-3.5 h-3.5"></i> Send
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let chatHistory = [];
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('border-slate-900', 'text-slate-900');
+      btn.classList.add('border-transparent', 'text-slate-500');
+    });
+
+    document.getElementById(tabId)?.classList.remove('hidden');
+    const activeBtn = document.getElementById('tab-' + tabId);
+    if (activeBtn) {
+      activeBtn.classList.remove('border-transparent', 'text-slate-500');
+      activeBtn.classList.add('border-slate-900', 'text-slate-900');
+    }
+  }
+
+  async function togglePublicShare() {
+    const btn = document.getElementById('shareToggleBtn');
+    try {
+      const resp = await fetch('/resume/{{ resume.id }}/toggle-share', { method: 'POST' });
+      const data = await resp.json();
+      if (data.success) {
+        if (data.is_public) {
+          btn.innerText = 'Enabled';
+          btn.className = 'text-xs px-2.5 py-1 rounded font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
+          document.getElementById('shareUrlContainer').classList.remove('hidden');
+          document.getElementById('shareUrlInput').value = data.share_url;
+        } else {
+          btn.innerText = 'Disabled';
+          btn.className = 'text-xs px-2.5 py-1 rounded font-bold bg-slate-100 text-slate-600 border border-slate-200';
+          document.getElementById('shareUrlContainer').classList.add('hidden');
+        }
+      }
+    } catch (e) {
+      alert('Error toggling share status.');
+    }
+  }
+
+  function copyShareUrl() {
+    const input = document.getElementById('shareUrlInput');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    alert('Public resume link copied to clipboard!');
+  }
+
+  async function generateCoverLetter() {
+    const tone = document.getElementById('coverToneSelect').value;
+    document.getElementById('coverLetterLoading').classList.remove('hidden');
+    document.getElementById('coverLetterPlaceholder')?.classList.add('hidden');
+    document.getElementById('coverLetterContentContainer').classList.add('hidden');
+
+    try {
+      const resp = await fetch('/api/generate-cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume_id: {{ resume.id }}, tone: tone })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        document.getElementById('coverLetterEditor').value = data.content;
+        document.getElementById('coverLetterContentContainer').classList.remove('hidden');
+      } else {
+        alert('Cover letter generation failed: ' + data.error);
+      }
+    } catch (e) {
+      alert('Network error generating cover letter');
+    } finally {
+      document.getElementById('coverLetterLoading').classList.add('hidden');
+    }
+  }
+
+  async function generateInterviewPrep() {
+    document.getElementById('interviewLoading').classList.remove('hidden');
+    document.getElementById('interviewContent').classList.add('hidden');
+
+    try {
+      const resp = await fetch('/api/generate-interview-prep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume_id: {{ resume.id }} })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert('Interview prep generation failed: ' + data.error);
+        document.getElementById('interviewLoading').classList.add('hidden');
+      }
+    } catch (e) {
+      alert('Network error');
+      document.getElementById('interviewLoading').classList.add('hidden');
+    }
+  }
+
+  async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    input.value = '';
+    const chatBox = document.getElementById('chatMessages');
+    chatBox.innerHTML += `<div class="p-3 bg-slate-900 text-white rounded-lg ml-8 text-right font-medium">${msg}</div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    chatHistory.push({ role: 'user', content: msg });
+
+    try {
+      const resp = await fetch('/api/resume/{{ resume.id }}/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, history: chatHistory })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        chatBox.innerHTML += `<div class="p-3 bg-white border border-slate-200 rounded-lg text-slate-800 leading-relaxed shadow-2xs mr-8">${data.reply}</div>`;
+        chatHistory.push({ role: 'model', content: data.reply });
+      } else {
+        chatBox.innerHTML += `<div class="p-2 bg-rose-50 text-rose-700 text-xs rounded border border-rose-200">Error: ${data.error}</div>`;
+      }
+    } catch (e) {
+      chatBox.innerHTML += `<div class="p-2 bg-rose-50 text-rose-700 text-xs rounded border border-rose-200">Network error.</div>`;
+    }
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  // Close Export Dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    const container = document.getElementById('exportDropdownContainer');
+    const menu = document.getElementById('exportDropdownMenu');
+    if (container && menu && !container.contains(e.target)) {
+      menu.classList.add('hidden');
+    }
+  });
+</script>
+{% endblock %}
